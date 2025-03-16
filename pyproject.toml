@@ -26,6 +26,12 @@ dependencies = [
   "matplotlib>=3.7.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "flake8",
+  "pytest",
+]
+
 [project.urls]
 "Source" = "https://github.com/JaLuka98/CPax"
 "Tracker" = "https://github.com/JaLuka98/CPax/issues"
