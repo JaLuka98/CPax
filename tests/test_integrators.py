@@ -1,7 +1,6 @@
-import jax
 import jax.numpy as jnp
-import pytest
 from cpax.ode.integrators import simulate_rk4_scan
+
 
 # Rename helper function so it isn’t collected as a test and remove jax.jit
 def ode_test_function(state, t, k=1.0):
@@ -9,9 +8,11 @@ def ode_test_function(state, t, k=1.0):
     x, v = state
     return jnp.array([v, -k * x])
 
+
 def different_ode(state, t, omega=1.5):
     x, v = state
     return jnp.array([v, -omega * x])
+
 
 def test_harmonic_oscillator():
     x0 = jnp.array([1.0, 0.0])
