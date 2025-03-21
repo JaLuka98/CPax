@@ -18,7 +18,7 @@ def test_harmonic_oscillator():
     x0 = jnp.array([1.0, 0.0])
     t0 = 0.0
     dt = 0.01
-    n_steps = 100
+    n_steps = 500
     k = 1.0
 
     # Pass the non-jitted helper function to simulate_rk4_scan
@@ -28,10 +28,15 @@ def test_harmonic_oscillator():
     assert xs.shape == (n_steps, 2), "Incorrect shape for state array."
     assert ts.shape == (n_steps,), "Incorrect shape for time array."
 
+    # Check for conservation of energy
+    energies = 0.5 * (xs[:, 1]**2 + k * xs[:, 0]**2)
+    initial_energy = energies[0]
+    assert jnp.allclose(energies, initial_energy, atol=1e-2), "Energy is not conserved."
+
     # Here, 'omega' should be automatically detected as static
     ts, xs = simulate_rk4_scan(x0, t0, dt, n_steps, different_ode, omega=2.5)
 
-    # Performt he check again
+    # Perform the check again
     assert xs.shape == (n_steps, 2), "Incorrect shape for state array."
     assert ts.shape == (n_steps,), "Incorrect shape for time array."
 

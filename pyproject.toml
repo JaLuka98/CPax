@@ -31,6 +31,9 @@ dev = [
   "flake8",
   "pytest",
 ]
+test = [
+  "pytest",
+]
 
 [project.urls]
 "Source" = "https://github.com/JaLuka98/CPax"
