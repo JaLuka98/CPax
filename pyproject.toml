@@ -31,8 +31,6 @@ dev = [
   "flake8",
   "pytest",
 ]
-
-[project.optional-dependencies]
 test = [
   "pytest",
 ]
