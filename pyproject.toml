@@ -32,6 +32,11 @@ dev = [
   "pytest",
 ]
 
+[project.optional-dependencies]
+test = [
+  "pytest",
+]
+
 [project.urls]
 "Source" = "https://github.com/JaLuka98/CPax"
 "Tracker" = "https://github.com/JaLuka98/CPax/issues"
