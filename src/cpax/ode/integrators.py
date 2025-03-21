@@ -5,17 +5,13 @@ from typing import Callable, Tuple, Dict, Any
 
 
 def classify_static_args(kwargs: Dict[str, Any]):
-    """
-    Determines which keyword arguments should be treated as static
-    (i.e., non-JAX arrays).
-    """
     return tuple(name for name, value in kwargs.items() if not isinstance(value, jnp.ndarray))
 
 
 @partial(jax.jit, static_argnums=(0,))
 def rk4_step(
     f: Callable[[jnp.ndarray, float, dict], jnp.ndarray],
-    x: jnp.ndarray,
+    state: jnp.ndarray,
     t: float,
     dt: float,
     **kwargs
@@ -26,9 +22,10 @@ def rk4_step(
     Parameters
     ----------
     f : callable
-        The ODE derivative function: f(x, t, **kwargs) -> dx/dt as a jnp.ndarray.
-    x : jnp.ndarray
-        Current state of the system.
+        The ODE derivative function: f(state, t, **kwargs) -> dstate/dt as a jnp.ndarray.
+        Assumes state = [q, p] or generalised form.
+    state : jnp.ndarray
+        Current state vector.
     t : float
         Current time.
     dt : float
@@ -41,16 +38,16 @@ def rk4_step(
     jnp.ndarray
         The new state after one RK4 update step.
     """
-    k1 = dt * f(x, t, **kwargs)
-    k2 = dt * f(x + 0.5 * k1, t + 0.5 * dt, **kwargs)
-    k3 = dt * f(x + 0.5 * k2, t + 0.5 * dt, **kwargs)
-    k4 = dt * f(x + k3, t + dt, **kwargs)
-    return x + (k1 + 2*k2 + 2*k3 + k4) / 6.0
+    k1 = dt * f(state, t, **kwargs)
+    k2 = dt * f(state + 0.5 * k1, t + 0.5 * dt, **kwargs)
+    k3 = dt * f(state + 0.5 * k2, t + 0.5 * dt, **kwargs)
+    k4 = dt * f(state + k3, t + dt, **kwargs)
+    return state + (k1 + 2*k2 + 2*k3 + k4) / 6.0
 
 
 @partial(jax.jit, static_argnums=(3, 4), static_argnames=("k"))
 def simulate_rk4_scan(
-    x0: jnp.ndarray,
+    state0: jnp.ndarray,
     t0: float,
     dt: float,
     n_steps: int,
@@ -62,8 +59,8 @@ def simulate_rk4_scan(
 
     Parameters
     ----------
-    x0 : jnp.ndarray
-        Initial state, e.g., [position, velocity].
+    state0 : jnp.ndarray
+        Initial state, e.g., [q, p].
     t0 : float
         Initial time.
     dt : float
@@ -71,7 +68,7 @@ def simulate_rk4_scan(
     n_steps : int
         Number of RK4 steps to perform.
     f : callable
-        The ODE derivative function: f(x, t, **kwargs) -> dx/dt.
+        The ODE derivative function: f(state, t, **kwargs) -> dstate/dt.
     kwargs : dict
         Additional parameters passed to f at each step.
 
@@ -79,16 +76,16 @@ def simulate_rk4_scan(
     -------
     ts : jnp.ndarray
         Times at each step of the integration.
-    xs : jnp.ndarray
-        State at each step (shape: [n_steps, x0.shape]).
+    states : jnp.ndarray
+        State at each step (shape: [n_steps, state0.shape]).
     """
     def step_fn(carry, _):
-        x, t = carry
-        x_new = rk4_step(f, x, t, dt, **kwargs)
+        state, t = carry
+        state_new = rk4_step(f, state, t, dt, **kwargs)
         t_new = t + dt
-        return (x_new, t_new), (x_new, t_new)
+        return (state_new, t_new), (state_new, t_new)
 
-    (x_final, t_final), (xs, ts) = jax.lax.scan(
-        step_fn, (x0, t0), xs=None, length=n_steps
+    (state_final, t_final), (states, ts) = jax.lax.scan(
+        step_fn, (state0, t0), xs=None, length=n_steps
     )
-    return ts, xs
+    return ts, states
