@@ -4,7 +4,7 @@ channels:
 dependencies:
   # core functionality
   - python=3.11
-  - numpy>=1.24,<2.0
+  - numpy>=2.0
   - jax>=0.4.0
   - jaxlib>=0.4.0
   # Visualisation
