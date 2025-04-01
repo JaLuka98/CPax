@@ -22,7 +22,7 @@ def rk4_step(
     Parameters
     ----------
     f : callable
-        The ODE derivative function: f(state, t, **kwargs) -> dstate/dt as a jnp.ndarray.
+        The ODE derivative function: f(state, t, `**kwargs`) -> dstate/dt as a jnp.ndarray.
         Assumes state = [q, p] or generalised form.
     state : jnp.ndarray
         Current state vector.
@@ -68,7 +68,7 @@ def simulate_rk4_scan(
     n_steps : int
         Number of RK4 steps to perform.
     f : callable
-        The ODE derivative function: f(state, t, **kwargs) -> dstate/dt.
+        The ODE derivative function: f(state, t, `**kwargs`) -> dstate/dt.
     kwargs : dict
         Additional parameters passed to f at each step.
 

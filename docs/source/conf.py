@@ -23,7 +23,6 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',  # For Google/NumPy-style docstrings
     'sphinx.ext.viewcode',
-    'sphinx.ext.autosummary',
     'autoapi.extension', # let us test this
     'sphinx_autodoc_typehints',
     'myst_parser',  # Optional for Markdown
@@ -33,10 +32,6 @@ autoapi_type = 'python'
 autoapi_dirs = ['../../src']
 autoapi_ignore = ["*/__main__.py", "*/tests/*"]
 
-autosummary_generate = True  # Automatically generate summary tables
-# Make sure the autosummary output dir exists
-import pathlib
-(pathlib.Path(__file__).parent / "generated").mkdir(exist_ok=True)
 templates_path = ['_templates']
 exclude_patterns = []
 

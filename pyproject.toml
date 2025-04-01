@@ -38,6 +38,7 @@ docs = [
   "sphinx>=5.0",
   "sphinx-rtd-theme",
   "sphinx-autodoc-typehints",
+  "sphinx-autoapi",
   "myst-parser"
 ]
 
