@@ -16,13 +16,13 @@ def rk4_step(
     dt: float,
     **kwargs
 ) -> jnp.ndarray:
-    """
+    r"""
     Perform one RK4 step of ODE integration with a JAX-traceable function f.
 
     Parameters
     ----------
     f : callable
-        The ODE derivative function: f(state, t, `**kwargs`) -> dstate/dt as a jnp.ndarray.
+        The ODE derivative function: f(state, t, \*\*kwargs) -> dstate/dt as a jnp.ndarray.
         Assumes state = [q, p] or generalised form.
     state : jnp.ndarray
         Current state vector.
@@ -54,7 +54,7 @@ def simulate_rk4_scan(
     f: Callable[[jnp.ndarray, float, dict], jnp.ndarray],
     **kwargs
 ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    """
+    r"""
     Use JAX's `lax.scan` to perform n_steps of RK4 integration.
 
     Parameters
@@ -68,7 +68,7 @@ def simulate_rk4_scan(
     n_steps : int
         Number of RK4 steps to perform.
     f : callable
-        The ODE derivative function: f(state, t, `**kwargs`) -> dstate/dt.
+        The ODE derivative function: f(state, t, \*\*kwargs) -> dstate/dt.
     kwargs : dict
         Additional parameters passed to f at each step.
 
