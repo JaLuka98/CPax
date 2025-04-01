@@ -34,6 +34,12 @@ dev = [
 test = [
   "pytest",
 ]
+docs = [
+  "sphinx>=5.0",
+  "sphinx-rtd-theme",
+  "sphinx-autodoc-typehints",
+  "myst-parser"
+]
 
 [project.urls]
 "Source" = "https://github.com/JaLuka98/CPax"
