@@ -1,7 +1,4 @@
-"""
-CPax: A JAX-based library for ODE/PDE solving in computational physics.
-"""
+# cpax/__init__.py
 
-__version__ = "0.0.1"
-
-from .ode.integrators import simulate_rk4_scan, rk4_step  # Example re-exports
+# Import submodules but don’t expose specific functions
+from . import ode
