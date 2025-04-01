@@ -23,7 +23,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',  # For Google/NumPy-style docstrings
     'sphinx.ext.viewcode',
-    'autoapi.extension', # let us test this
+    'autoapi.extension',  # let us test this
     'sphinx_autodoc_typehints',
     'myst_parser',  # Optional for Markdown
 ]
