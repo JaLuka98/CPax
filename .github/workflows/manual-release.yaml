@@ -29,20 +29,25 @@ jobs:
         env:
           DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
-          YEAR=$(date +%Y)
-          MONTH=$(date +%m)
-          PREFIX="v${YEAR}.${MONTH}"
+          set -e
+          # 1) Get latest tag or empty
           LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          YEAR=$(date +%Y)                # calendar year
+          MONTH=$(date +%m)               # zero-padded month
+          PREFIX="v${YEAR}.${MONTH}"
+
           if [[ "$LATEST" == $PREFIX.* ]]; then
             SEQ=${LATEST##*.}
             NEXT_SEQ=$((SEQ + 1))
           else
             NEXT_SEQ=0
           fi
+
           NEW_VERSION="${YEAR}.${MONTH}.${NEXT_SEQ}"
           echo "→ Next version will be ${NEW_VERSION}"
 
-          CMD="bump-my-version set ${NEW_VERSION}"
+          # Build the bump command
+          CMD="bump-my-version bump --new-version ${NEW_VERSION}"
           if [[ "$DRY_RUN" == 'true' ]]; then
             CMD+=" --dry-run --verbose"
           fi
