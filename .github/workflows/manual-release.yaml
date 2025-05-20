@@ -54,6 +54,6 @@ jobs:
           echo "Running: $CMD"
           $CMD
 
-      #- name: Push changes
-      #  if: ${{ github.event.inputs.dry_run == false }}
-      #  run: git push origin HEAD --follow-tags
+      - name: Push changes
+        if: ${{ github.event.inputs.dry_run == false }}
+        run: git push origin HEAD --follow-tags
