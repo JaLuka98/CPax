@@ -2,55 +2,53 @@ name: Manual CalVer Release
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run only? (no commit, no push)'
+        type: boolean
+        default: true
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout with full history & tags
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # need all tags
+          fetch-depth: 0
           tags: true
 
-      # 2. Set up Python
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3. Install bump-my-version
       - name: Install bump-my-version
         run: pip install bump-my-version
 
-      # 4. Compute the next CalVer tag and bump
-      - name: Compute & apply CalVer bump
+      - name: Compute & (dry-)apply CalVer bump
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
-          # fetch latest tag, or empty if none
-          LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          # pull year & month from calendar
           YEAR=$(date +%Y)
           MONTH=$(date +%m)
           PREFIX="v${YEAR}.${MONTH}"
-
+          LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [[ "$LATEST" == $PREFIX.* ]]; then
-            # extract the sequence number and increment
             SEQ=${LATEST##*.}
             NEXT_SEQ=$((SEQ + 1))
           else
             NEXT_SEQ=0
           fi
-
           NEW_VERSION="${YEAR}.${MONTH}.${NEXT_SEQ}"
-          echo "➜ bump-my-version set ${NEW_VERSION}"
-          # this will:
-          #  • update all files per your [[tool.bumpversion.files]]
-          #  • bump current_version in .bumpversion.toml
-          #  • commit with your message template
-          #  • create tag "v${NEW_VERSION}" per tag_name
-          bump-my-version set "${NEW_VERSION}"
+          echo "→ Next version will be ${NEW_VERSION}"
 
-      # 5. Push commit + tags
+          CMD="bump-my-version set ${NEW_VERSION}"
+          if [[ "$DRY_RUN" == 'true' ]]; then
+            CMD+=" --dry-run --verbose"
+          fi
+          echo "Running: $CMD"
+          $CMD
+
       - name: Push changes
-        run: |
-          git push origin HEAD --follow-tags
+        if: ${{ github.event.inputs.dry_run == false }}
+        run: git push origin HEAD --follow-tags
