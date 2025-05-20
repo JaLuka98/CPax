@@ -1,0 +1,24 @@
+# .github/workflows/manual-release.yml
+name: Manual CalVer Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install bump-my-version
+        run: pip install bump-my-version
+
+      - name: Bump version
+        run: |
+          bump-my-version bump patch
+          git push origin HEAD --follow-tags

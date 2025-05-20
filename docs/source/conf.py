@@ -9,11 +9,13 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../src'))
+import importlib.metadata
 
 project = 'CPax'
 copyright = '2025, Jan Lukas Späh'
 author = 'Jan Lukas Späh'
-release = 'v2025.4.0'
+release = importlib.metadata.version("cpax")
+version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
