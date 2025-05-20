@@ -1,28 +1,31 @@
 [tool.bumpversion]
 current_version = "2025.04.0"
-parse           = "^(?P<year>\\d{4})\\.(?P<month>\\d{2})\\.(?P<patch>\\d+)$"
+parse           = '^(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<patch>\d+)$'
 serialize       = ["{year}.{month}.{patch}"]
 tag             = true
 tag_name        = "v{new_version}"
 commit          = true
 message         = "Release: {new_version}"
 
+# YEAR part: full four-digit year
 [tool.bumpversion.parts.year]
-type           = "calver"
-calver_format  = "%Y"
+type          = "calver"
+calver_format = "{YYYY}"
 
+# MONTH part: zero-padded two-digit month
 [tool.bumpversion.parts.month]
-type           = "calver"
-calver_format  = "%m"
+type          = "calver"
+calver_format = "{0M}"
 
+# PATCH part: simple integer
 [tool.bumpversion.parts.patch]
-type           = "integer"
+type = "integer"
 
+# Files to update
 [[tool.bumpversion.files]]
-filename = "pyproject.toml"
-search   = 'version = "2025.04.0"'
-replace  = 'version = "{new_version}"'
-
+filename             = "pyproject.toml"
+search               = 'version = "2025.04.0"'
+replace              = 'version = "{new_version}"'
 [[tool.bumpversion.files]]
-filename = "src/cpax/__init__.py"
-ignore_missing_version = true
+filename             = "src/cpax/__init__.py"
+ignore_missing       = true
