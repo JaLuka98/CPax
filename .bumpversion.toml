@@ -27,4 +27,5 @@ replace  = 'version = "{new_version}"'
 
 [[tool.bumpversion.files]]
 filename       = "src/cpax/__init__.py"
-ignore_missing = true
+search   = '__version__ = "{current_version}"'
+replace  = '__version__ = "{new_version}"'
