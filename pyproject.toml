@@ -1,48 +1,31 @@
-[build-system]
-requires = ["setuptools>=65.5", "wheel"]
-build-backend = "setuptools.build_meta"
+[tool.bumpversion]
+current_version = "2025.04.0"
+parse           = '^(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<patch>\d+)$'
+serialize       = ["{year}.{month}.{patch}"]
+tag             = true
+tag_name        = "v{new_version}"
+commit          = true
+message         = "Release: {new_version}"
 
-[project]
-name = "CPax"
-version = "2025.04.0"
-description = "CPax: A JAX-based computational physics library."
-authors = [
-  { name = "Jan Lukas Späh", email = "your.email@example.com" }
-]
-license = { text = "MIT" }
-readme = "README.md"
-keywords = ["physics", "computational", "jax", "autograd", "ODE", "PDE"]
-classifiers = [
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "License :: OSI Approved :: MIT License"
-]
+# YEAR part: full four-digit year
+[tool.bumpversion.parts.year]
+type          = "calver"
+calver_format = "{YYYY}"
 
-dependencies = [
-  "jax>=0.4.0",
-  "jaxlib>=0.4.0",
-  "numpy>=2.0",
-  "matplotlib>=3.7.0",
-]
+# MONTH part: zero-padded two-digit month
+[tool.bumpversion.parts.month]
+type          = "calver"
+calver_format = "{0M}"
 
-[project.optional-dependencies]
-dev = [
-  "flake8",
-  "pytest",
-  "bump-my-version",
-]
-test = [
-  "pytest",
-]
-docs = [
-  "sphinx>=5.0",
-  "sphinx-rtd-theme",
-  "sphinx-autodoc-typehints",
-  "sphinx-autoapi",
-  "myst-parser"
-]
+# PATCH part: simple integer
+[tool.bumpversion.parts.patch]
+type = "integer"
 
-[project.urls]
-"Source" = "https://github.com/JaLuka98/CPax"
-"Tracker" = "https://github.com/JaLuka98/CPax/issues"
+# Files to update
+[[tool.bumpversion.files]]
+filename             = "pyproject.toml"
+search               = 'version = "2025.04.0"'
+replace              = 'version = "{new_version}"'
+[[tool.bumpversion.files]]
+filename             = "src/cpax/__init__.py"
+ignore_missing       = true
