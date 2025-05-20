@@ -1,5 +1,5 @@
 [bumpversion]
-current_version = "2025.05.02"
+current_version = "2025.04.0"
 version_pattern = "calver"
 parse = "^(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<patch>\d+)$"
 serialize = [

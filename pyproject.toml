@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "CPax"
-version = "2025.5.0"
+version = "2025.4.0"
 description = "CPax: A JAX-based computational physics library."
 authors = [
   { name = "Jan Lukas Späh", email = "your.email@example.com" }
