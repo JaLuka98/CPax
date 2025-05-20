@@ -1,9 +1,9 @@
 [bumpversion]
 current_version = "2025.04.0"
 version_pattern = "calver"
-parse = "^(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<patch>\d+)$"
+parse = "^(?P<year>\\d{4})\\.(?P<month>\\d{2})\\.(?P<patch>\\d+)$"
 serialize = [
-  "{year}.{month}.{patch}",
+  "{year}.{month}.{patch}"
 ]
 tag = true
 tag_name = "v{new_version}"
@@ -20,5 +20,5 @@ month.format = "%m"
 patch.type = "integer"
 
 [bumpversion.files]
-pyproject.toml = []
+pyproject.toml = { search = 'version = "2025.04.0"', replace = 'version = "{new_version}"' }
 "src/cpax/__init__.py" = []
