@@ -49,7 +49,7 @@ jobs:
           # Build the bump command
           CMD="bump-my-version bump --new-version ${NEW_VERSION}"
           if [[ "$DRY_RUN" == 'true' ]]; then
-            CMD+=" --dry-run --verbose"
+            CMD+=" --dry-run --verbose --no-commit --no-tag"
           fi
           echo "Running: $CMD"
           $CMD
