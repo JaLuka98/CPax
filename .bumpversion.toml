@@ -1,5 +1,5 @@
 [tool.bumpversion]
-current_version = "2025.04.0"
+current_version = "2025.05.0"
 parse           = '^(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<patch>\d+)$'
 # ← use your part names here and pad month to two digits
 serialize       = ["{year}.{month:02d}.{patch}"]
