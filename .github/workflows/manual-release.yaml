@@ -1,5 +1,9 @@
 name: Manual CalVer Release
 
+# give the token write access to repo contents (default is read)
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # persist the GITHUB_TOKEN in .git/config so pushes/auth work
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
           fetch-depth: 0
           fetch-tags: true
 
