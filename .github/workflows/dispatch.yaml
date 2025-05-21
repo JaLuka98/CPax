@@ -1,0 +1,36 @@
+name: Dispatch with ENV override
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run only? (no commit, no push)"
+        type: boolean
+        default: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine DRY_RUN
+        # Seed DRY_RUN from the dispatch input, but allow `act --env DRY_RUN=...` to override.
+        env:
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          # If DRY_RUN is already set in the environment (via act --env), keep it;
+          # otherwise fall back to the workflow input.
+          DRY_RUN="${DRY_RUN:-$INPUT_DRY_RUN}"
+          echo "→ DRY_RUN is: '$DRY_RUN'"
+
+      - name: Do something only on real run
+        if: env.DRY_RUN == 'false'
+        run: |
+          echo "This would be the real work (commit, push, etc.)"
+
+      - name: Do the dry-run things
+        if: env.DRY_RUN == 'true'
+        run: |
+          echo "This is a dry-run: skipping commit & push"
