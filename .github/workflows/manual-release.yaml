@@ -56,8 +56,10 @@ jobs:
             CMD+=" --dry-run --verbose --no-commit --no-tag"
           fi
           echo "Running: $CMD"
+          # expose DRY_RUN to all later steps
+          echo "DRY_RUN=$DRY_RUN" >> $GITHUB_ENV
           $CMD
 
       - name: Push changes
-        if: ${{ github.event.inputs.dry_run == false }}
+        if: env.DRY_RUN == 'false'
         run: git push origin HEAD --follow-tags
