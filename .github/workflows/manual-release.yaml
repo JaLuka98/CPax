@@ -1,16 +1,23 @@
-# .github/workflows/manual-release.yml
 name: Manual CalVer Release
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run only? (no commit, no push)'
+        type: boolean
+        default: true
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -18,7 +25,41 @@ jobs:
       - name: Install bump-my-version
         run: pip install bump-my-version
 
-      - name: Bump version
+      - name: Compute & (dry-)apply CalVer bump
+        env:
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
-          bump-my-version bump patch
-          git push origin HEAD --follow-tags
+          set -e
+          # If `DRY_RUN` was passed via act CLI, keep it; else use the workflow‐dispatch input
+          DRY_RUN="${DRY_RUN:-$INPUT_DRY_RUN}"
+          echo "DRY_RUN is: '$DRY_RUN'"
+
+          # 1) Get latest tag or empty
+          LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          YEAR=$(date +%Y)                # calendar year
+          MONTH=$(date +%m)               # zero-padded month
+          PREFIX="v${YEAR}.${MONTH}"
+
+          if [[ "$LATEST" == $PREFIX.* ]]; then
+            SEQ=${LATEST##*.}
+            NEXT_SEQ=$((SEQ + 1))
+          else
+            NEXT_SEQ=0
+          fi
+
+          NEW_VERSION="${YEAR}.${MONTH}.${NEXT_SEQ}"
+          echo "Next version will be ${NEW_VERSION}"
+
+          # Build the bump command
+          CMD="bump-my-version bump --new-version ${NEW_VERSION}"
+          if [[ "$DRY_RUN" == 'true' ]]; then
+            CMD+=" --dry-run --verbose --no-commit --no-tag"
+          fi
+          echo "Running: $CMD"
+          # expose DRY_RUN to all later steps
+          echo "DRY_RUN=$DRY_RUN" >> $GITHUB_ENV
+          $CMD
+
+      - name: Push changes
+        if: env.DRY_RUN == 'false'
+        run: git push origin HEAD --follow-tags

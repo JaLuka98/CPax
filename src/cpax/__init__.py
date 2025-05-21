@@ -1,7 +1,6 @@
 # cpax/__init__.py
 
-from importlib.metadata import version
-__version__ = version("cpax")
+__version__ = "2025.04.0"
 
 # Import submodules but don’t expose specific functions
 from . import ode
