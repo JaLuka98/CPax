@@ -27,18 +27,13 @@ jobs:
 
       - name: Compute & (dry-)apply CalVer bump
         env:
-          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
           set -e
-          # Grab GH input (will be empty under act unless you simulate)
-          INPUT_DRY_RUN="${{ github.event.inputs.dry_run }}"
-          # If the runner already set DRY_RUN (via act --env), keep it;
-          # otherwise fall back to the dispatch input.
+          # If `DRY_RUN` was passed via act CLI, keep it; else use the workflow‐dispatch input
           DRY_RUN="${DRY_RUN:-$INPUT_DRY_RUN}"
-
-          # Now DRY_RUN comes from either --env DRY_RUN or from inputs.dry_run
           echo "DRY_RUN is: '$DRY_RUN'"
-          
+
           # 1) Get latest tag or empty
           LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           YEAR=$(date +%Y)                # calendar year
