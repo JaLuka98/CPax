@@ -15,7 +15,7 @@ type = "calver"
 
 [tool.bumpversion.parts.month]
 type = "calver"
-# likewise, calver_format here is optional once you’re formatting via Python sintax.
+# likewise, calver_format here is optional once you’re formatting via Python syntax.
 
 [tool.bumpversion.parts.patch]
 type = "integer"
