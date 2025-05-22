@@ -9,12 +9,12 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../src'))
-import importlib.metadata
 
 project = 'CPax'
 copyright = '2025, Jan Lukas Späh'
 author = 'Jan Lukas Späh'
-release = importlib.metadata.version("cpax")
+from cpax import __version__
+release = __version__
 version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
