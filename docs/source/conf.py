@@ -8,12 +8,12 @@
 
 import os
 import sys
+from cpax import __version__
 sys.path.insert(0, os.path.abspath('../../src'))
 
 project = 'CPax'
 copyright = '2025, Jan Lukas Späh'
 author = 'Jan Lukas Späh'
-from cpax import __version__
 release = __version__
 version = ".".join(release.split(".")[:2])
 
