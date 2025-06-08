@@ -8,13 +8,19 @@
 
 import os
 import sys
+try:
+    from cpax import __version__
+except (ImportError, AttributeError) as e:
+    raise RuntimeError(
+        "Failed to import `__version__` from the `cpax` package. Ensure that the `cpax` package is installed "
+        "and contains a `__version__` attribute."
+    ) from e
 sys.path.insert(0, os.path.abspath('../../src'))
-import importlib.metadata
 
 project = 'CPax'
 copyright = '2025, Jan Lukas Späh'
 author = 'Jan Lukas Späh'
-release = importlib.metadata.version("cpax")
+release = __version__
 version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
