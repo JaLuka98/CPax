@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 from cpax.ode.models import hamiltonian_nd
+from cpax.ode.models import potential_gravitational
 from cpax.ode.integrators import simulate_leapfrog_scan
 
 # Constants
@@ -35,16 +36,9 @@ ts, qs, ps = simulate_leapfrog_scan(q0, p0, t0=0.0, dt=dt, n_steps=n_steps, f=f,
 def kinetic_energy(p, masses):
     return 0.5 * jnp.sum(jnp.sum(p**2, axis=-1) / masses)
 
-def potential_energy(q, masses):
-    N = q.shape[0]
-    diffs = q[:, None, :] - q[None, :, :]
-    distances = jnp.linalg.norm(diffs + jnp.eye(N)[:, :, None], axis=-1)
-    mprod = masses[:, None] * masses[None, :]
-    mask = 1.0 - jnp.eye(N)
-    V_mat = -G * mprod / distances * mask
-    return 0.5 * jnp.sum(V_mat)
+potential_energy = potential_gravitational(masses)
 
-Es = jnp.array([kinetic_energy(p, masses) + potential_energy(q, masses)
+Es = jnp.array([kinetic_energy(p, masses) + potential_energy(q)
                 for q, p in zip(qs, ps)])
 
 # Plot energy
