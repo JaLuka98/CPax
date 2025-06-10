@@ -1,9 +1,11 @@
 name: Test ODE module
+
 on:
   push:
-    branches: [ "*" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "*" ]
+
 jobs:
   test:
     runs-on: ubuntu-latest
