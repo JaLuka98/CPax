@@ -192,5 +192,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# Images
+# Images and animations
+*.gif
 *.png
