@@ -191,3 +191,7 @@ cython_debug/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Images and animations
+*.gif
+*.png
