@@ -30,7 +30,7 @@ dt = 0.001
 t_end = 5
 n_steps = int(t_end / dt)
 f = hamiltonian_nd(masses, potential="gravity")
-ts, qs, ps = simulate_leapfrog_scan(q0, p0, t0=0.0, dt=dt, n_steps=n_steps, f=f, masses=masses)
+ts, qs, ps = simulate_leapfrog_scan(q0, p0, t0=0.0, dt=dt, n_steps=n_steps, f=f)
 
 # Energy diagnostics
 def kinetic_energy(p, masses):
