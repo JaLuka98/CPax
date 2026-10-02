@@ -1,6 +1,30 @@
 import jax
 import jax.numpy as jnp
-from typing import Callable
+from typing import Callable, Tuple, Union
+
+
+def potential_gravitational(masses: jnp.ndarray) -> Callable[[jnp.ndarray], float]:
+    """Return Newtonian pairwise gravitational potential energy.
+
+    The gravitational constant is ``G = 4 * pi**2``, suitable for the usual
+    astronomical unit system (AU, solar masses, and years). Positions must
+    have shape ``(N, D)`` matching the number of supplied masses. There is no
+    collision softening: distinct particles at the same position are singular.
+    """
+    G = 4 * jnp.pi**2
+
+    def V(q: jnp.ndarray) -> float:
+        n_particles = q.shape[0]
+        displacements = q[:, None, :] - q[None, :, :]
+        self_pairs = jnp.eye(n_particles, dtype=q.dtype)
+        # Offset self-pairs before the norm so autodiff never differentiates
+        # norm(0). They are subsequently removed from the interaction sum.
+        distances = jnp.linalg.norm(displacements + self_pairs[:, :, None], axis=-1)
+        pair_masses = masses[:, None] * masses[None, :]
+        interactions = (1.0 - self_pairs) * pair_masses / distances
+        return -0.5 * G * jnp.sum(interactions)
+
+    return V
 
 
 def newtonian_1d(potential: Callable[[float], float]) -> Callable:
@@ -51,5 +75,48 @@ def hamiltonian_1d(H: Callable[[float, float], float]) -> Callable:
         dqdt = dH_dp(q, p)
         dpdt = -dH_dq(q, p)
         return jnp.array([dqdt, dpdt])
+
+    return dynamics
+
+
+def hamiltonian_nd(
+    masses: jnp.ndarray,
+    potential: Union[str, Callable[[jnp.ndarray], float]] = "gravity"
+) -> Callable[[jnp.ndarray, jnp.ndarray, float], Tuple[jnp.ndarray, jnp.ndarray]]:
+    """
+    Return separable Hamiltonian dynamics for an N-body system.
+
+    The generated dynamics represent ``H(q, p) = sum(p**2 / (2 m)) + V(q)``
+    in canonical coordinates. They are therefore compatible with the
+    symplectic leapfrog integrator.
+
+    Parameters
+    ----------
+    masses : jnp.ndarray
+        Nonzero particle masses with shape ``(N,)``.
+    potential : str or callable
+        ``"gravity"`` for :func:`potential_gravitational`, or a callable
+        ``V(q) -> float``. The gravity alias uses ``G = 4 * pi**2`` and has
+        no collision softening.
+
+    Returns
+    -------
+    dynamics : Callable
+        Function ``f(q, p, t) -> (dqdt, dpdt)`` for arrays shaped ``(N, D)``.
+    """
+    if isinstance(potential, str):
+        if potential == "gravity":
+            V = potential_gravitational(masses)
+        else:
+            raise ValueError(f"Unknown potential alias: {potential}")
+    else:
+        V = potential
+
+    grad_V = jax.grad(V)
+
+    def dynamics(q: jnp.ndarray, p: jnp.ndarray, t: float) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        dqdt = p / masses[:, None]
+        dpdt = -grad_V(q)
+        return dqdt, dpdt
 
     return dynamics
