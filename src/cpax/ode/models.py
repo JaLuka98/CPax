@@ -1,22 +1,31 @@
 import jax
 import jax.numpy as jnp
-from typing import Callable, Literal, Tuple, Union
+from typing import Callable, Tuple, Union
 
 
 def potential_gravitational(masses: jnp.ndarray) -> Callable[[jnp.ndarray], float]:
-    """Returns V(q) for Newtonian gravity between all pairs of particles."""
+    """Return Newtonian pairwise gravitational potential energy.
+
+    The gravitational constant is ``G = 4 * pi**2``, suitable for the usual
+    astronomical unit system (AU, solar masses, and years). Positions must
+    have shape ``(N, D)`` matching the number of supplied masses. There is no
+    collision softening: distinct particles at the same position are singular.
+    """
     G = 4 * jnp.pi**2
 
     def V(q: jnp.ndarray) -> float:
-        N, D = q.shape
-        diffs = q[:, None, :] - q[None, :, :]  # (N, N, D)
-        distances = jnp.linalg.norm(diffs + jnp.eye(N)[:, :, None], axis=-1)
-        mask = 1.0 - jnp.eye(N)
-        mprod = masses[:, None] * masses[None, :]
-        V_mat = -G * mprod / distances * mask
-        return 0.5 * jnp.sum(V_mat)
+        n_particles = q.shape[0]
+        displacements = q[:, None, :] - q[None, :, :]
+        self_pairs = jnp.eye(n_particles, dtype=q.dtype)
+        # Offset self-pairs before the norm so autodiff never differentiates
+        # norm(0). They are subsequently removed from the interaction sum.
+        distances = jnp.linalg.norm(displacements + self_pairs[:, :, None], axis=-1)
+        pair_masses = masses[:, None] * masses[None, :]
+        interactions = (1.0 - self_pairs) * pair_masses / distances
+        return -0.5 * G * jnp.sum(interactions)
 
     return V
+
 
 def newtonian_1d(potential: Callable[[float], float]) -> Callable:
     """
@@ -43,6 +52,7 @@ def newtonian_1d(potential: Callable[[float], float]) -> Callable:
 
     return dynamics
 
+
 def hamiltonian_1d(H: Callable[[float, float], float]) -> Callable:
     """
     Returns canonical Hamiltonian dynamics in 1D using Hamiltonian H(q, p).
@@ -68,24 +78,31 @@ def hamiltonian_1d(H: Callable[[float, float], float]) -> Callable:
 
     return dynamics
 
+
 def hamiltonian_nd(
     masses: jnp.ndarray,
     potential: Union[str, Callable[[jnp.ndarray], float]] = "gravity"
 ) -> Callable[[jnp.ndarray, jnp.ndarray, float], Tuple[jnp.ndarray, jnp.ndarray]]:
     """
-    General Hamiltonian dynamics in N-body system using canonical coordinates.
+    Return separable Hamiltonian dynamics for an N-body system.
+
+    The generated dynamics represent ``H(q, p) = sum(p**2 / (2 m)) + V(q)``
+    in canonical coordinates. They are therefore compatible with the
+    symplectic leapfrog integrator.
 
     Parameters
     ----------
     masses : jnp.ndarray
-        Array of shape (N,) with masses.
+        Nonzero particle masses with shape ``(N,)``.
     potential : str or callable
-        Either a string like 'gravity' or a function V(q) -> float.
+        ``"gravity"`` for :func:`potential_gravitational`, or a callable
+        ``V(q) -> float``. The gravity alias uses ``G = 4 * pi**2`` and has
+        no collision softening.
 
     Returns
     -------
     dynamics : Callable
-        Function f(q, p, t) -> (dqdt, dpdt)
+        Function ``f(q, p, t) -> (dqdt, dpdt)`` for arrays shaped ``(N, D)``.
     """
     if isinstance(potential, str):
         if potential == "gravity":

@@ -90,7 +90,8 @@ def simulate_rk4_scan(
     )
     return ts, states
 
-@partial(jax.jit, static_argnums=(0,))
+
+@partial(jax.jit, static_argnames=("f",))
 def leapfrog_step(
     f: Callable[[jnp.ndarray, jnp.ndarray, float], Tuple[jnp.ndarray, jnp.ndarray]],
     q: jnp.ndarray,
@@ -100,12 +101,17 @@ def leapfrog_step(
     **kwargs,
 ) -> Tuple[jnp.ndarray, jnp.ndarray]:
     """
-    Perform one step of symplectic Leapfrog integration.
+    Perform one kick-drift-kick leapfrog step.
+
+    The method is symplectic for separable Hamiltonians of the form
+    ``H(q, p) = T(p) + V(q)``. A time- or momentum-dependent force may still
+    be supplied through ``f``, but does not retain that guarantee.
 
     Parameters
     ----------
     f : Callable
-        Hamiltonian dynamics function f(q, p, t) -> (dqdt, dpdt)
+        Hamiltonian dynamics function ``f(q, p, t, **kwargs)`` returning
+        ``(dqdt, dpdt)``.
     q : jnp.ndarray
         Positions (N, D)
     p : jnp.ndarray
@@ -114,21 +120,24 @@ def leapfrog_step(
         Current time
     dt : float
         Timestep
+    kwargs : dict
+        Additional arguments forwarded to ``f`` at every force evaluation.
 
     Returns
     -------
     q_next, p_next : Tuple of arrays
         Updated positions and momenta
     """
-    dqdt, dpdt = f(q, p, t)
+    _, dpdt = f(q, p, t, **kwargs)
     p_half = p + 0.5 * dt * dpdt
-    dqdt_half, _ = f(q, p_half, t + 0.5 * dt)
+    dqdt_half, _ = f(q, p_half, t + 0.5 * dt, **kwargs)
     q_new = q + dt * dqdt_half
-    _, dpdt_new = f(q_new, p_half, t + dt)
+    _, dpdt_new = f(q_new, p_half, t + dt, **kwargs)
     p_new = p_half + 0.5 * dt * dpdt_new
     return q_new, p_new
 
-@partial(jax.jit, static_argnums=(4,), static_argnames=("n_steps", "f",))
+
+@partial(jax.jit, static_argnames=("n_steps", "f"))
 def simulate_leapfrog_scan(
     q0: jnp.ndarray,
     p0: jnp.ndarray,
@@ -139,7 +148,10 @@ def simulate_leapfrog_scan(
     **kwargs
 ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """
-    Simulate trajectory using symplectic Leapfrog integration.
+    Simulate a trajectory using kick-drift-kick leapfrog integration.
+
+    The initial state is not included in the returned trajectory. Each sample
+    contains the state after one integration step and its matching time.
 
     Returns
     -------
@@ -153,7 +165,8 @@ def simulate_leapfrog_scan(
     def step_fn(carry, _):
         q, p, t = carry
         q_new, p_new = leapfrog_step(f, q, p, t, dt, **kwargs)
-        return (q_new, p_new, t + dt), (q_new, p_new, t)
+        t_new = t + dt
+        return (q_new, p_new, t_new), (q_new, p_new, t_new)
 
-    (qf, pf, tf), (qs, ps, ts) = jax.lax.scan(step_fn, (q0, p0, t0), None, length=n_steps)
+    _, (qs, ps, ts) = jax.lax.scan(step_fn, (q0, p0, t0), None, length=n_steps)
     return ts, qs, ps
