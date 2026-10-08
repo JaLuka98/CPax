@@ -11,9 +11,7 @@ def classify_static_args(kwargs: dict[str, Any]):
 
 
 @partial(jax.jit, static_argnums=(0,))
-def rk4_step(
-    f: Callable[[jnp.ndarray, float, dict], jnp.ndarray], state: jnp.ndarray, t: float, dt: float, **kwargs
-) -> jnp.ndarray:
+def rk4_step(f: Callable[..., jax.Array], state: jnp.ndarray, t: float, dt: float, **kwargs) -> jnp.ndarray:
     r"""
     Perform one RK4 step of ODE integration with a JAX-traceable function f.
 
@@ -49,7 +47,7 @@ def simulate_rk4_scan(
     t0: float,
     dt: float,
     n_steps: int,
-    f: Callable[[jnp.ndarray, float, dict], jnp.ndarray],
+    f: Callable[..., jax.Array],
     **kwargs,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
     r"""
@@ -84,7 +82,7 @@ def simulate_rk4_scan(
         t_new = t + dt
         return (state_new, t_new), (state_new, t_new)
 
-    (state_final, t_final), (states, ts) = jax.lax.scan(step_fn, (state0, t0), xs=None, length=n_steps)
+    _, (states, ts) = jax.lax.scan(step_fn, (state0, t0), xs=None, length=n_steps)
     return ts, states
 
 

@@ -18,7 +18,7 @@ def check_energy_conservation(ps, k):
     assert jnp.allclose(energies, initial_energy, atol=1e-2), "Energy is not conserved."
 
 
-# Rename helper function so it isn’t collected as a test and remove jax.jit
+# Rename helper function so it isn't collected as a test and remove jax.jit
 def ode_test_function(state, t, k=1.0):
     # For a simple harmonic oscillator: dx/dt = v, dv/dt = -k*x
     x, v = state
