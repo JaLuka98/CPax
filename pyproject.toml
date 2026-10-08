@@ -26,21 +26,25 @@ dependencies = [
   "matplotlib>=3.7",
 ]
 
-[project.optional-dependencies]
-dev = [
-  "flake8",
-  "pytest",
-  "bump-my-version",
-]
+[dependency-groups]
 test = [
   "pytest",
+]
+lint = [
+  "flake8",
 ]
 docs = [
   "sphinx>=5.0",
   "sphinx-rtd-theme",
   "sphinx-autodoc-typehints",
   "sphinx-autoapi",
-  "myst-parser"
+  "myst-parser",
+]
+dev = [
+  { include-group = "test" },
+  { include-group = "lint" },
+  { include-group = "docs" },
+  "bump-my-version",
 ]
 
 [project.urls]

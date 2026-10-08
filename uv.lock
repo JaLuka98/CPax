@@ -333,11 +333,16 @@ dependencies = [
     { name = "numpy" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "bump-my-version" },
     { name = "flake8" },
+    { name = "myst-parser" },
     { name = "pytest" },
+    { name = "sphinx" },
+    { name = "sphinx-autoapi" },
+    { name = "sphinx-autodoc-typehints" },
+    { name = "sphinx-rtd-theme" },
 ]
 docs = [
     { name = "myst-parser" },
@@ -346,26 +351,40 @@ docs = [
     { name = "sphinx-autodoc-typehints" },
     { name = "sphinx-rtd-theme" },
 ]
+lint = [
+    { name = "flake8" },
+]
 test = [
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "bump-my-version", marker = "extra == 'dev'" },
-    { name = "flake8", marker = "extra == 'dev'" },
     { name = "jax", specifier = ">=0.11" },
     { name = "matplotlib", specifier = ">=3.7" },
-    { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "numpy", specifier = ">=2.0" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'test'" },
-    { name = "sphinx", marker = "extra == 'docs'", specifier = ">=5.0" },
-    { name = "sphinx-autoapi", marker = "extra == 'docs'" },
-    { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'" },
-    { name = "sphinx-rtd-theme", marker = "extra == 'docs'" },
 ]
-provides-extras = ["dev", "test", "docs"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "bump-my-version" },
+    { name = "flake8" },
+    { name = "myst-parser" },
+    { name = "pytest" },
+    { name = "sphinx", specifier = ">=5.0" },
+    { name = "sphinx-autoapi" },
+    { name = "sphinx-autodoc-typehints" },
+    { name = "sphinx-rtd-theme" },
+]
+docs = [
+    { name = "myst-parser" },
+    { name = "sphinx", specifier = ">=5.0" },
+    { name = "sphinx-autoapi" },
+    { name = "sphinx-autodoc-typehints" },
+    { name = "sphinx-rtd-theme" },
+]
+lint = [{ name = "flake8" }]
+test = [{ name = "pytest" }]
 
 [[package]]
 name = "cycler"
