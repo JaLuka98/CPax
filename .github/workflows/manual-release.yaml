@@ -29,10 +29,10 @@ jobs:
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install bump-my-version
         run: pip install bump-my-version
@@ -42,7 +42,7 @@ jobs:
           INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
           set -e
-          # If `DRY_RUN` was passed via act CLI, keep it; else use the workflow‐dispatch input
+          # If `DRY_RUN` was passed via act CLI, keep it; else use the workflow-dispatch input
           DRY_RUN="${DRY_RUN:-$INPUT_DRY_RUN}"
           echo "DRY_RUN is: '$DRY_RUN'"
 
