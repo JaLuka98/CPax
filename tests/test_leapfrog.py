@@ -25,9 +25,7 @@ def test_leapfrog_scan_returns_post_step_states_and_times():
     q0 = jnp.array([[1.0]])
     p0 = jnp.array([[0.0]])
 
-    ts, qs, ps = simulate_leapfrog_scan(
-        q0, p0, 1.0, 0.1, 3, harmonic_oscillator
-    )
+    ts, qs, ps = simulate_leapfrog_scan(q0, p0, 1.0, 0.1, 3, harmonic_oscillator)
 
     assert ts.shape == (3,)
     assert qs.shape == (3, 1, 1)
@@ -40,9 +38,7 @@ def test_leapfrog_forwards_keyword_arguments_to_dynamics():
     q0 = jnp.array([[1.0]])
     p0 = jnp.array([[0.0]])
 
-    q1, p1 = leapfrog_step(
-        harmonic_oscillator, q0, p0, 0.0, 0.1, spring_constant=4.0
-    )
+    q1, p1 = leapfrog_step(harmonic_oscillator, q0, p0, 0.0, 0.1, spring_constant=4.0)
 
     assert jnp.allclose(q1, jnp.array([[0.98]]), atol=1e-6)
     assert jnp.allclose(p1, jnp.array([[-0.396]]), atol=1e-6)
@@ -52,9 +48,7 @@ def test_leapfrog_has_bounded_harmonic_oscillator_energy_error():
     q0 = jnp.array([[1.0]])
     p0 = jnp.array([[0.0]])
 
-    _, qs, ps = simulate_leapfrog_scan(
-        q0, p0, 0.0, 0.01, 1_000, harmonic_oscillator
-    )
+    _, qs, ps = simulate_leapfrog_scan(q0, p0, 0.0, 0.01, 1_000, harmonic_oscillator)
     energies = 0.5 * (qs[:, 0, 0] ** 2 + ps[:, 0, 0] ** 2)
 
     assert jnp.max(jnp.abs(energies - energies[0])) < 1e-3

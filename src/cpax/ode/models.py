@@ -1,6 +1,7 @@
+from collections.abc import Callable
+
 import jax
 import jax.numpy as jnp
-from typing import Callable, Tuple, Union
 
 
 def potential_gravitational(masses: jnp.ndarray) -> Callable[[jnp.ndarray], float]:
@@ -80,9 +81,8 @@ def hamiltonian_1d(H: Callable[[float, float], float]) -> Callable:
 
 
 def hamiltonian_nd(
-    masses: jnp.ndarray,
-    potential: Union[str, Callable[[jnp.ndarray], float]] = "gravity"
-) -> Callable[[jnp.ndarray, jnp.ndarray, float], Tuple[jnp.ndarray, jnp.ndarray]]:
+    masses: jnp.ndarray, potential: str | Callable[[jnp.ndarray], float] = "gravity"
+) -> Callable[[jnp.ndarray, jnp.ndarray, float], tuple[jnp.ndarray, jnp.ndarray]]:
     """
     Return separable Hamiltonian dynamics for an N-body system.
 
@@ -114,7 +114,7 @@ def hamiltonian_nd(
 
     grad_V = jax.grad(V)
 
-    def dynamics(q: jnp.ndarray, p: jnp.ndarray, t: float) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    def dynamics(q: jnp.ndarray, p: jnp.ndarray, t: float) -> tuple[jnp.ndarray, jnp.ndarray]:
         dqdt = p / masses[:, None]
         dpdt = -grad_V(q)
         return dqdt, dpdt

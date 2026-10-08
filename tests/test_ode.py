@@ -1,6 +1,7 @@
 import jax.numpy as jnp
+
 from cpax.ode.integrators import simulate_rk4_scan
-from cpax.ode.models import newtonian_1d, hamiltonian_1d
+from cpax.ode.models import hamiltonian_1d, newtonian_1d
 
 # Define some global variables for these test cases
 ps0 = jnp.array([1.0, 0.0])  # position and velocity (or momentum for unit mass): initial phase space point
@@ -12,7 +13,7 @@ k = 1.0
 
 def check_energy_conservation(ps, k):
     # Check for conservation of energy
-    energies = 0.5 * (ps[:, 1]**2 + k * ps[:, 0]**2)
+    energies = 0.5 * (ps[:, 1] ** 2 + k * ps[:, 0] ** 2)
     initial_energy = energies[0]
     assert jnp.allclose(energies, initial_energy, atol=1e-2), "Energy is not conserved."
 
