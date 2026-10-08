@@ -1,0 +1,17 @@
+# Run locally with: uvx pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.5
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty (Astral type checker)
+        entry: uv run --locked --no-default-groups --group lint ty check
+        language: system
+        pass_filenames: false
+        always_run: true
