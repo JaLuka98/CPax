@@ -30,7 +30,7 @@ jobs:
           git config user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Set up Python 3.12
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: '3.12'
           enable-cache: true
@@ -63,15 +63,26 @@ jobs:
           NEW_VERSION="${YEAR}.${MONTH}.${NEXT_SEQ}"
           echo "Next version will be ${NEW_VERSION}"
 
-          # Build the bump command
-          CMD="bump-my-version bump --new-version ${NEW_VERSION}"
+          # Stage the version update; commit and tag only after uv.lock is refreshed.
+          CMD="bump-my-version bump --new-version ${NEW_VERSION} --no-commit --no-tag"
           if [[ "$DRY_RUN" == 'true' ]]; then
-            CMD+=" --dry-run --verbose --no-commit --no-tag"
+            CMD+=" --dry-run --verbose"
           fi
           echo "Running: $CMD"
           # expose DRY_RUN to all later steps
           echo "DRY_RUN=$DRY_RUN" >> $GITHUB_ENV
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
           $CMD
+
+      - name: Update uv.lock
+        run: uv lock
+
+      - name: Commit and tag release
+        if: env.DRY_RUN == 'false'
+        run: |
+          git add pyproject.toml src/cpax/__init__.py uv.lock
+          git commit -m "Release: ${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
 
       - name: Push changes
         if: env.DRY_RUN == 'false'
