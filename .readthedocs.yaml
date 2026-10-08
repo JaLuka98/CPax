@@ -18,6 +18,7 @@ sphinx:
 # Install the package itself so that the version can be fetched dynamically during docs building (see docs/source/conf.py)
 python:
   install:
-    - method: pip
-      path: .
-      extra_requirements: [docs]
+    - method: uv
+      command: sync
+      groups:
+        - docs
