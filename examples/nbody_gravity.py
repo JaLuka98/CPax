@@ -44,7 +44,7 @@ def kinetic_energy(p, masses):
 
 potential_energy = potential_gravitational(masses)
 
-Es = jnp.array([kinetic_energy(p, masses) + potential_energy(q) for q, p in zip(qs, ps)])
+Es = jnp.array([kinetic_energy(p, masses) + potential_energy(q) for q, p in zip(qs, ps, strict=True)])
 
 # Plot energy
 plt.figure()
@@ -66,9 +66,9 @@ labels = ["Sun", "Earth", "Mars", "Comet"]
 fig, ax = plt.subplots(figsize=(6, 6))
 scatters = []
 trails = []
-for c, l in zip(colors, labels):
-    (scat,) = ax.plot([], [], "o", color=c, label=l)
-    (trail,) = ax.plot([], [], "-", color=c, alpha=0.5)
+for color, label in zip(colors, labels, strict=True):
+    (scat,) = ax.plot([], [], "o", color=color, label=label)
+    (trail,) = ax.plot([], [], "-", color=color, alpha=0.5)
     scatters.append(scat)
     trails.append(trail)
 
@@ -82,14 +82,14 @@ ax.legend()
 
 
 def init():
-    for scat, trail in zip(scatters, trails):
+    for scat, trail in zip(scatters, trails, strict=True):
         scat.set_data([], [])
         trail.set_data([], [])
     return scatters + trails
 
 
 def update(frame):
-    for i, (scat, trail) in enumerate(zip(scatters, trails)):
+    for i, (scat, trail) in enumerate(zip(scatters, trails, strict=True)):
         x, y = qs[frame, i]
         # pass as sequences, even for a single point:
         scat.set_data([x], [y])
