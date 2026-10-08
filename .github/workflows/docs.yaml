@@ -11,15 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v5
+      uses: actions/checkout@v7
+
+    - name: Set up Python 3.12
+      uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       with:
-        python-version: "3.11"
-    - name: Install package and documentation dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install .[docs]
-    - name: Build documentation with warnings as errors
-      run: |
-        sphinx-build -W -b html docs/source docs/_build/html
+        python-version: "3.12"
+
+    - name: Install locked documentation environment
+      run: uv sync --locked --no-default-groups --group docs
+
+    - name: Build documentation
+      run: uv run --no-sync sphinx-build -W -b html docs/source docs/_build/html

@@ -16,7 +16,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # persist the GITHUB_TOKEN in .git/config so pushes/auth work
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -29,10 +29,11 @@ jobs:
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.12
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: '3.11'
+          python-version: '3.12'
+          enable-cache: true
 
       - name: Install bump-my-version
         run: pip install bump-my-version
@@ -42,7 +43,7 @@ jobs:
           INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
           set -e
-          # If `DRY_RUN` was passed via act CLI, keep it; else use the workflow‐dispatch input
+          # If `DRY_RUN` was passed via act CLI, keep it; else use the workflow-dispatch input
           DRY_RUN="${DRY_RUN:-$INPUT_DRY_RUN}"
           echo "DRY_RUN is: '$DRY_RUN'"
 
@@ -62,15 +63,26 @@ jobs:
           NEW_VERSION="${YEAR}.${MONTH}.${NEXT_SEQ}"
           echo "Next version will be ${NEW_VERSION}"
 
-          # Build the bump command
-          CMD="bump-my-version bump --new-version ${NEW_VERSION}"
+          # Stage the version update; commit and tag only after uv.lock is refreshed.
+          CMD="bump-my-version bump --new-version ${NEW_VERSION} --no-commit --no-tag"
           if [[ "$DRY_RUN" == 'true' ]]; then
-            CMD+=" --dry-run --verbose --no-commit --no-tag"
+            CMD+=" --dry-run --verbose"
           fi
           echo "Running: $CMD"
           # expose DRY_RUN to all later steps
           echo "DRY_RUN=$DRY_RUN" >> $GITHUB_ENV
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
           $CMD
+
+      - name: Update uv.lock
+        run: uv lock
+
+      - name: Commit and tag release
+        if: env.DRY_RUN == 'false'
+        run: |
+          git add pyproject.toml src/cpax/__init__.py uv.lock
+          git commit -m "Release: ${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
 
       - name: Push changes
         if: env.DRY_RUN == 'false'
