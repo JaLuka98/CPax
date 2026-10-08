@@ -30,4 +30,4 @@ jobs:
     - name: Run flake8
       run: |
         # Run flake8 on the src and tests directories
-        flake8 src tests
+        uv run --locked --group lint flake8 src tests
