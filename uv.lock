@@ -329,7 +329,6 @@ version = "2025.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "jax" },
-    { name = "jaxlib" },
     { name = "matplotlib" },
     { name = "numpy" },
 ]
@@ -355,9 +354,8 @@ test = [
 requires-dist = [
     { name = "bump-my-version", marker = "extra == 'dev'" },
     { name = "flake8", marker = "extra == 'dev'" },
-    { name = "jax", specifier = ">=0.4.0" },
-    { name = "jaxlib", specifier = ">=0.4.0" },
-    { name = "matplotlib", specifier = ">=3.7.0" },
+    { name = "jax", specifier = ">=0.11" },
+    { name = "matplotlib", specifier = ">=3.7" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'" },
