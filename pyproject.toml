@@ -52,7 +52,6 @@ dev = [
 "Source" = "https://github.com/JaLuka98/CPax"
 "Tracker" = "https://github.com/JaLuka98/CPax/issues"
 
-# Adopt the same Ruff ruleset as root-explorer, while retaining CPax's line limit.
 [tool.ruff]
 target-version = "py312"
 line-length = 119
