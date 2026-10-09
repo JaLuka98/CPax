@@ -31,7 +31,7 @@ test = [
   "pytest",
 ]
 lint = [
-  "ruff==0.16.5",
+  "ruff==0.16.10",
   "ty==0.0.84",
 ]
 docs = [
