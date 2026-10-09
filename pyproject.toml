@@ -31,7 +31,8 @@ test = [
   "pytest",
 ]
 lint = [
-  "flake8",
+  "ruff==0.16.5",
+  "ty==0.0.84",
 ]
 docs = [
   "sphinx>=5.0",
@@ -50,3 +51,40 @@ dev = [
 [project.urls]
 "Source" = "https://github.com/JaLuka98/CPax"
 "Tracker" = "https://github.com/JaLuka98/CPax/issues"
+
+# Adopt the same Ruff ruleset as root-explorer, while retaining CPax's line limit.
+[tool.ruff]
+required-version = "==0.16.5"
+target-version = "py312"
+line-length = 119
+
+[tool.ruff.lint]
+select = [
+  "E4",   # Import conventions
+  "E7",   # Statement conventions
+  "E9",   # Syntax errors
+  "F",    # Pyflakes
+  "I",    # isort
+  "UP",   # Modern Python syntax
+  "B",    # flake8-bugbear
+  "SIM",  # flake8-simplify
+  "C4",   # flake8-comprehensions
+  "PIE",  # flake8-pie
+  "RUF",  # Ruff-specific correctness checks
+  "NPY",  # NumPy correctness
+  "PERF", # Perflint
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/cpax/__init__.py" = ["F401"]
+"src/cpax/ode/__init__.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# Type-check the public library. Tests and examples can be added after the
+# scientific API has been fully annotated.
+[tool.ty.src]
+include = ["src"]

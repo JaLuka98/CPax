@@ -1,7 +1,0 @@
-[flake8]
-max-line-length = 119
-# default is 79, 119 is max for GitHub code review.
-# No reason to limit ourselves to 79 if the code looks uglier or less readable.
-exclude = .git,__pycache__,build,dist
-per-file-ignores =
-    */__init__.py: F401

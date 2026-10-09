@@ -1,9 +1,10 @@
+from collections.abc import Callable
+
 import jax
 import jax.numpy as jnp
-from typing import Callable, Tuple, Union
 
 
-def potential_gravitational(masses: jnp.ndarray) -> Callable[[jnp.ndarray], float]:
+def potential_gravitational(masses: jnp.ndarray) -> Callable[[jnp.ndarray], jax.Array]:
     """Return Newtonian pairwise gravitational potential energy.
 
     The gravitational constant is ``G = 4 * pi**2``, suitable for the usual
@@ -13,7 +14,7 @@ def potential_gravitational(masses: jnp.ndarray) -> Callable[[jnp.ndarray], floa
     """
     G = 4 * jnp.pi**2
 
-    def V(q: jnp.ndarray) -> float:
+    def V(q: jnp.ndarray) -> jax.Array:
         n_particles = q.shape[0]
         displacements = q[:, None, :] - q[None, :, :]
         self_pairs = jnp.eye(n_particles, dtype=q.dtype)
@@ -80,9 +81,8 @@ def hamiltonian_1d(H: Callable[[float, float], float]) -> Callable:
 
 
 def hamiltonian_nd(
-    masses: jnp.ndarray,
-    potential: Union[str, Callable[[jnp.ndarray], float]] = "gravity"
-) -> Callable[[jnp.ndarray, jnp.ndarray, float], Tuple[jnp.ndarray, jnp.ndarray]]:
+    masses: jnp.ndarray, potential: str | Callable[[jnp.ndarray], jax.Array] = "gravity"
+) -> Callable[[jnp.ndarray, jnp.ndarray, float], tuple[jnp.ndarray, jnp.ndarray]]:
     """
     Return separable Hamiltonian dynamics for an N-body system.
 
@@ -114,7 +114,7 @@ def hamiltonian_nd(
 
     grad_V = jax.grad(V)
 
-    def dynamics(q: jnp.ndarray, p: jnp.ndarray, t: float) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    def dynamics(q: jnp.ndarray, p: jnp.ndarray, t: float) -> tuple[jnp.ndarray, jnp.ndarray]:
         dqdt = p / masses[:, None]
         dpdt = -grad_V(q)
         return dqdt, dpdt

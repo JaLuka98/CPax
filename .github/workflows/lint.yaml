@@ -1,33 +1,35 @@
-name: lint
+name: Ruff and ty
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "*" ]
+    branches: ["*"]
+
+permissions:
+  contents: read
 
 jobs:
-  lint:
+  static-analysis:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Check out repository
-      uses: actions/checkout@v7
+      - name: Check out repository
+        uses: actions/checkout@v7
 
-    - name: Install uv and Python 3.12
-      uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-      with:
-        python-version: "3.12"
-        enable-cache: true
+      - name: Install uv and Python 3.12
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
 
-    - name: Install package and flake8
-      run: |
-        uv sync --locked --no-default-groups --group lint
-        uv run --no-sync flake8 src tests
-        # Optionally, install your package in editable mode
-        #pip install -e .
-        
-    - name: Run flake8
-      run: |
-        # Run flake8 on the src and tests directories
-        uv run --locked --group lint flake8 src tests
+      - name: Install locked lint environment
+        run: uv sync --locked --no-default-groups --group lint
+
+      - name: Run Ruff lint checks
+        run: uv run --no-sync ruff check --output-format=github .
+
+      - name: Check Ruff formatting
+        run: uv run --no-sync ruff format --check .
+
+      - name: Type-check library with ty
+        run: uv run --no-sync ty check

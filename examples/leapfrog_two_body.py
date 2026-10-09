@@ -34,7 +34,7 @@ def main():
     _, qs, ps = simulate_leapfrog_scan(q0, p0, 0.0, 0.002, 1_000, dynamics)
 
     initial_energy = potential(q0) + 0.5 * jnp.sum(p0**2 / masses[:, None])
-    final_energy = potential(qs[-1]) + 0.5 * jnp.sum(ps[-1]**2 / masses[:, None])
+    final_energy = potential(qs[-1]) + 0.5 * jnp.sum(ps[-1] ** 2 / masses[:, None])
     print(f"Relative energy drift: {(final_energy - initial_energy) / initial_energy:.3e}")
 
     plt.plot(qs[:, 0, 0], qs[:, 0, 1], label="body 1 (mass 1.0)")
