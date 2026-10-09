@@ -35,8 +35,8 @@ jobs:
           python-version: '3.12'
           enable-cache: true
 
-      - name: Install bump-my-version
-        run: pip install bump-my-version
+      - name: Install locked release tooling
+        run: uv sync --locked --no-default-groups --group dev
 
       - name: Compute & (dry-)apply CalVer bump
         env:
@@ -64,7 +64,7 @@ jobs:
           echo "Next version will be ${NEW_VERSION}"
 
           # Stage the version update; commit and tag only after uv.lock is refreshed.
-          CMD="bump-my-version bump --new-version ${NEW_VERSION} --no-commit --no-tag"
+          CMD="uv run --no-sync bump-my-version bump --new-version ${NEW_VERSION} --no-commit --no-tag"
           if [[ "$DRY_RUN" == 'true' ]]; then
             CMD+=" --dry-run --verbose"
           fi
