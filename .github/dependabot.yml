@@ -1,0 +1,36 @@
+# Keep CPax's uv lockfile and GitHub Actions up to date.
+# pyproject.toml declares direct dependencies; Dependabot updates uv.lock too.
+# CI uses 'uv sync --locked' so PR checks exercise the proposed resolution.
+version: 2
+
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      scientific-stack:
+        patterns:
+          - jax
+          - jaxlib
+          - diffrax
+          - equinox
+          - numpy
+          - matplotlib
+      development-tools:
+        patterns:
+          - ruff
+          - ty
+          - pytest*
+          - bump-my-version
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns:
+          - "*"
