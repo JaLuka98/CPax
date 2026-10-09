@@ -54,7 +54,6 @@ dev = [
 
 # Adopt the same Ruff ruleset as root-explorer, while retaining CPax's line limit.
 [tool.ruff]
-required-version = "==0.16.5"
 target-version = "py312"
 line-length = 119
 
