@@ -1,5 +1,5 @@
 Continuous-time dynamical systems
-================================
+=================================
 
 CPax models continuous-time evolution through the shared
 ``cpax.dynamics.DynamicalSystem`` interface. A system describes the
