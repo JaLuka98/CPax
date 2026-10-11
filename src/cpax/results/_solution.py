@@ -7,6 +7,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jax.core import Tracer
 
 from cpax.dynamics._systems import State
 
@@ -68,9 +69,11 @@ class Solution(eqx.Module):
         status = jnp.asarray(self.status)
         if status.ndim != 0 or status.dtype.kind not in "iu":
             raise TypeError("status must be a scalar integer outcome code.")
-        if not isinstance(status, jax.core.Tracer):
-            if int(np.asarray(status)) not in (SolutionStatus.SUCCESS, SolutionStatus.FAILED):
-                raise ValueError("status must be a SolutionStatus outcome code.")
+        if not isinstance(status, Tracer) and int(np.asarray(status)) not in (
+            SolutionStatus.SUCCESS,
+            SolutionStatus.FAILED,
+        ):
+            raise ValueError("status must be a SolutionStatus outcome code.")
 
         object.__setattr__(self, "ts", ts)
         object.__setattr__(self, "ys", ys)

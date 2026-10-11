@@ -7,6 +7,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jax.core import Tracer
 
 from cpax.dynamics import DynamicalSystem
 from cpax.dynamics._systems import State, Time
@@ -75,10 +76,38 @@ class IVP(eqx.Module):
         t0, t1 = (_as_time(t) for t in self.t_span)
 
         # No Python boolean conversion is attempted for JAX tracers.
-        if not isinstance(t0, jax.core.Tracer) and not isinstance(t1, jax.core.Tracer):
+        if not isinstance(t0, Tracer) and not isinstance(t1, Tracer):
             a, b = float(np.asarray(t0)), float(np.asarray(t1))
             if not np.isfinite(a) or not np.isfinite(b) or b <= a:
                 raise ValueError("t_span must contain finite endpoints with t1 > t0.")
+        # Validate shapes of the initial state and the system's vector field output.
+        try:
+            derivative = jax.eval_shape(
+                lambda y: self.system.vector_field(t0, y, self.args),
+                y0,
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "Could not evaluate the system's vector field with the "
+                "provided initial state y0 and args. Check their compatibility "
+                "and ensure the vector field supports JAX tracing."
+            ) from exc
+
+        # Verify PyTree structure.
+        if jax.tree.structure(derivative) != jax.tree.structure(y0):
+            raise ValueError(
+                "The vector field derivative must have the same PyTree structure as the initial state y0."
+            )
+
+        # Verify individual leaf shapes.
+        shapes_match = jax.tree.map(
+            lambda state, dy: state.shape == dy.shape,
+            y0,
+            derivative,
+        )
+
+        if not all(jax.tree.leaves(shapes_match)):
+            raise ValueError("The vector field derivative must have the same leaf shapes as the initial state y0.")
 
         object.__setattr__(self, "y0", y0)
         object.__setattr__(self, "t_span", (t0, t1))
