@@ -32,7 +32,7 @@ def test_pytree_states_retain_sample_axis():
     solution = Solution(jnp.array([0.0, 0.5, 1.0]), ys, SolutionStatus.SUCCESS)
 
     assert jax.tree.structure(solution.ys) == jax.tree.structure(ys)
-    assert [leaf.shape for leaf in jax.tree.leaves(solution.ys)] == [(3, 1), (3, 2), (3,)]
+    assert [leaf.shape for leaf in jax.tree.leaves(solution.ys)] == [(3,), (3, 1), (3, 2)]
     assert solution.stats == {}
     assert solution.metadata == {}
 
