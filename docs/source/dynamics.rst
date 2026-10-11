@@ -24,7 +24,7 @@ For example, the Lorenz system can be specified as a Python function:
    from cpax.dynamics import VectorFieldSystem
 
    def lorenz(t, state, args):
-       del t
+       del t # time is unused for this autonomous system
        x, y, z = state
        sigma, rho, beta = args
        return (
