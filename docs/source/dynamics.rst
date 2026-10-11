@@ -1,98 +1,110 @@
 Continuous-time dynamical systems
 =================================
 
-CPax models continuous-time evolution through the shared
-``cpax.dynamics.DynamicalSystem`` interface. A system describes the
-physical equations of motion; it does **not** choose an integrator, initial
-condition, sampling interval, or numerical backend.
+In CPax, a continuous-time dynamical system defines equations of motion,
+independently of initial conditions, numerical solvers and output handling.
+All such systems share the abstract
+``cpax.dynamics.DynamicalSystem`` interface. Its central method is
+``vector_field(t, state, args=None)``.
 
-Interface
----------
+Most users do not need to subclass ``DynamicalSystem`` themselves.
+For arbitrary equations of motion, ``VectorFieldSystem`` provides the
+simplest starting point. It is just a concrete implementation of the same
+interface, **not a different kind of physical system**.
 
-A dynamical system is an Equinox module exposing
-``vector_field(t, state, args=None)``. Here, ``state`` is an array-valued
-JAX PyTree, and the returned derivative must have the **same PyTree structure
-and leaf shapes** as the input state. The time argument comes first even for
-autonomous systems; ``args`` can contain per-evaluation external parameters.
+Defining equations of motion
+----------------------------
 
-For direct equations of motion, wrap a callable in ``VectorFieldSystem``:
+For example, the Lorenz system can be specified as a Python function:
 
 .. code-block:: python
 
-   import jax
    import jax.numpy as jnp
 
    from cpax.dynamics import VectorFieldSystem
 
-   def oscillator(t, state, args):
+   def lorenz(t, state, args):
        del t
-       q, p = state
-       return p, -args["k"] * q
+       x, y, z = state
+       sigma, rho, beta = args
+       return (
+           sigma * (y - x),
+           x * (rho - z) - y,
+           x * y - beta * z,
+       )
 
-   system = VectorFieldSystem(oscillator)
-   state = (jnp.array(1.0), jnp.array(0.0))
-   dqdt, dpdt = system.vector_field(
-       0.0, state, {"k": jnp.array(2.0)}
-   )
+   system = VectorFieldSystem(lorenz)
+   state = (jnp.array(1.0), jnp.array(1.0), jnp.array(1.0))
+   parameters = (10.0, 28.0, 8.0 / 3.0)
+   derivative = system.vector_field(0.0, state, parameters)
 
-The returned derivatives are ``(0.0, -2.0)`` for this initial state.
-Tuples, dictionaries and other supported array-valued PyTrees are valid
-state representations. This interface does not perform integration; problem,
-solver and solution objects are introduced separately.
+``VectorFieldSystem`` simply delegates ``vector_field`` to the supplied
+callable. No custom class is necessary for this use case.
 
-Custom physical systems can subclass ``DynamicalSystem`` directly:
+The method represents ``dy/dt = f(t, y; parameters)``. The ``state``
+may be an array or an array-valued JAX PyTree, such as a tuple or dictionary.
+Its derivative must have the **same PyTree structure and leaf shapes**.
+Time is the first argument even for autonomous systems. The optional
+``args`` provides parameters or other data for individual evaluations.
 
-.. code-block:: python
+This interface only evaluates the equations of motion; it does not
+integrate trajectories. Problems, solvers and solutions will be introduced
+in their respective packages.
 
-   import equinox as eqx
+Specialised physical systems
+----------------------------
 
-   class HarmonicOscillator(DynamicalSystem):
-       k: jax.Array
+CPax will also provide ready-made models, such as the planned
+``cpax.mechanics.NewtonianSystem`` and ``HamiltonianSystem``.
+They will implement ``DynamicalSystem`` while exposing physically
+meaningful inputs such as potentials, masses or Hamiltonians, and potentially
+quantities such as energy.
 
-       def vector_field(self, t, state, args=None):
-           del t, args
-           q, p = state
-           return p, -self.k * q
+Library developers and advanced users can subclass ``DynamicalSystem``
+when a specialised model warrants its own methods and parameters. Whether
+a system is wrapped by ``VectorFieldSystem`` or implemented as a dedicated
+class, numerical solvers will see the **same** ``vector_field`` interface.
 
-   model = HarmonicOscillator(k=jnp.array(2.0))
+Parameters and JAX transformations
+----------------------------------
 
-Since ``model`` is an Equinox PyTree, its array-valued fields may be used
-with JAX transformations, including differentiation.
+Model parameters may be stored as array-valued Equinox module fields
+(e.g. a spring constant ``self.k``) or supplied at evaluation time
+through ``args``. This is a choice about where parameters live, not a
+distinction between the two system classes. A ``VectorFieldSystem``
+can also wrap a callable Equinox module containing differentiable fields.
 
-JAX transformation conventions
-------------------------------
+Pure JAX-traceable vector fields support transformations such as
+``jax.jit``, ``jax.vmap`` and differentiation where applicable.
+For a system containing ordinary Python callables, ``jax.jit`` works
+when the system is captured by a closure. When **passing a module with
+non-array leaves as a function argument**, prefer
+``equinox.filter_jit``; ``equinox.filter_grad`` can likewise
+differentiate its floating-point array-valued parameters. The wrapper's
+``rhs`` field is intentionally not static.
 
-Equinox modules may also hold non-array fields, such as plain Python
-functions. Such a ``VectorFieldSystem`` works with ordinary
-``jax.jit`` when the system is closed over by the compiled function.
-When passing a module containing non-array leaves **as a function argument**,
-prefer ``equinox.filter_jit``. Likewise, ``equinox.filter_grad``
-can differentiate through floating-point array-valued fields in a callable
-Equinox module. The ``rhs`` field is deliberately not marked static.
-
-Evaluation assumes a pure, JAX-traceable vector field for supported
-transformations. It does not validate the state structure at every call:
-the system author is responsible for returning consistent derivatives.
-Physical domains, boundary conditions and numerical failures will be
-handled by the corresponding model and solver interfaces.
+Evaluation does not perform per-call validation of state structure.
+Model authors must return consistent derivatives. Physical domains,
+boundary conditions and numerical failures belong to the relevant model
+and solver interfaces.
 
 Dependency boundaries
 ---------------------
 
 The intended public namespaces are ``dynamics``, ``mechanics``,
 ``problems``, ``solvers`` and ``results``. Only implemented packages
-are created. In particular:
+are created:
 
-* ``dynamics`` contains shared continuous-time abstractions, and may use
-  JAX and Equinox. It must not import concrete physical models or solvers.
-* Physical-domain packages (e.g. future ``mechanics``) may depend on
-  ``dynamics``, but the reverse dependency is forbidden.
-* Problems refer to systems and their conditions, without requiring a
-  concrete integration backend.
-* Solvers may use private backend adapters; physical systems must not depend
-  on Diffrax, solver implementations or backend-specific public types.
-* Results expose outcomes and diagnostics independently of any one backend.
+* ``dynamics`` provides shared continuous-time abstractions using JAX
+  and Equinox, without importing concrete physical models or solvers.
+* Physical-domain packages may depend on ``dynamics``, but not vice versa.
+* Problems combine systems with conditions without depending on a specific
+  numerical backend.
+* Solvers may use private backend adapters; physical models must not depend
+  on Diffrax or backend-specific public types.
+* Results present numerical outcomes and diagnostics independently of
+  the chosen backend.
 
-The legacy ``cpax.ode`` utilities remain available. The continuous-time
-interface does not claim to cover discrete dynamics, Monte Carlo algorithms,
-or general PDE and boundary-value problem formulations.
+The legacy ``cpax.ode`` utilities remain available. This interface
+is not intended as a universal abstraction for discrete dynamics, Monte
+Carlo algorithms, or general PDE and boundary-value problem formulations.
