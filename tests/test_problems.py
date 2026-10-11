@@ -52,8 +52,16 @@ def test_array_valued_pytree_initial_state_is_preserved():
 
 @pytest.mark.parametrize(
     "interval",
-    [(1.0, 1.0), (2.0, 1.0), (float("nan"), 1.0), (0.0, float("inf")),
-     (0.0,), (0.0, 1.0, 2.0), ([0.0, 1.0], 2.0), (0.0, 1.0j)],
+    [
+        (1.0, 1.0),
+        (2.0, 1.0),
+        (float("nan"), 1.0),
+        (0.0, float("inf")),
+        (0.0,),
+        (0.0, 1.0, 2.0),
+        ([0.0, 1.0], 2.0),
+        (0.0, 1.0j),
+    ],
 )
 def test_invalid_intervals_are_rejected(interval):
     with pytest.raises((ValueError, TypeError)):
