@@ -21,6 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
+  "equinox>=0.13.8",
   "jax>=0.11",
   "numpy>=2.0",
   "matplotlib>=3.7",
