@@ -20,3 +20,12 @@ Run `uv run ruff check --fix .` to fix safe lint issues and
 available via `uvx pre-commit install`, or can be run without installation
 using `uvx pre-commit run --all-files`. Type checking currently covers the
 library under `src/`; tests and examples are linted and formatted.
+
+## Continuous-time dynamics
+
+Define equations of motion using `cpax.dynamics.VectorFieldSystem`, or
+subclass `cpax.dynamics.DynamicalSystem` to represent physical models with
+array-valued parameters. See the
+[continuous-time dynamics documentation](docs/source/dynamics.rst) for the
+interface, PyTree states and supported JAX transformation conventions.
+The existing `cpax.ode` integration utilities remain available.
