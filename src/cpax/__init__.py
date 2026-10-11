@@ -2,5 +2,5 @@
 
 __version__ = "2025.05.0"
 
-# Import submodules but don't expose specific functions
-from . import ode
+# Keep the legacy ODE interface available while introducing physics-first APIs.
+from . import dynamics, ode
