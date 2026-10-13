@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Validate lockfile
+        run: uv lock --check
+      - name: Build wheel and source distribution
+        run: uv build
+      - name: Install built wheel in clean environment
+        run: |
+          uv venv /tmp/cpax-install --python 3.12
+          uv pip install --python /tmp/cpax-install/bin/python dist/*.whl
+          /tmp/cpax-install/bin/python - <<'PY'
+          from importlib.metadata import version
+          import tomllib
+          import cpax
+          from packaging.version import Version
+
+          with open("pyproject.toml", "rb") as file:
+              expected = tomllib.load(file)["project"]["version"]
+          assert Version(cpax.__version__) == Version(expected)
+          assert Version(version("CPax")) == Version(expected)
+          PY
