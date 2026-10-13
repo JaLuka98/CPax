@@ -1,89 +1,73 @@
 name: Manual CalVer Release
 
-# give the token write access to repo contents (default is read)
-permissions:
-  contents: write
-
 on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry-run only? (no commit, no push)'
+        description: "Preview release without pushing"
         type: boolean
         default: true
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cpax-manual-release
+  cancel-in-progress: false
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
+      - name: Enforce main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          test "$REF" = "refs/heads/main" || { echo "::error::Select main"; exit 1; }
+
       - uses: actions/checkout@v7
         with:
-          # persist the GITHUB_TOKEN in .git/config so pushes/auth work
-          token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
+          persist-credentials: false
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Configure Git for the runner
+      - name: Reject stale checkout
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git fetch origin main --no-tags
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::main changed; rerun this workflow"
+            exit 1
+          }
 
-      - name: Set up Python 3.12
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: '3.12'
+          python-version: "3.12"
           enable-cache: true
 
-      - name: Install locked release tooling
+      - name: Install release dependencies
         run: uv sync --locked --no-default-groups --group dev
 
-      - name: Compute & (dry-)apply CalVer bump
+      - name: Prepare and validate release in disposable checkout
         env:
-          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: bash scripts/manual_release.sh
+
+      - name: Publish release commit and annotated tag
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
-          # If `DRY_RUN` was passed via act CLI, keep it; else use the workflow-dispatch input
-          DRY_RUN="${DRY_RUN:-$INPUT_DRY_RUN}"
-          echo "DRY_RUN is: '$DRY_RUN'"
-
-          # 1) Get latest tag or empty
-          LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          YEAR=$(date +%Y)                # calendar year
-          MONTH=$(date +%m)               # zero-padded month
-          PREFIX="v${YEAR}.${MONTH}"
-
-          if [[ "$LATEST" == $PREFIX.* ]]; then
-            SEQ=${LATEST##*.}
-            NEXT_SEQ=$((SEQ + 1))
-          else
-            NEXT_SEQ=0
-          fi
-
-          NEW_VERSION="${YEAR}.${MONTH}.${NEXT_SEQ}"
-          echo "Next version will be ${NEW_VERSION}"
-
-          # Stage the version update; commit and tag only after uv.lock is refreshed.
-          CMD="uv run --no-sync bump-my-version bump --new-version ${NEW_VERSION} --no-commit --no-tag"
-          if [[ "$DRY_RUN" == 'true' ]]; then
-            CMD+=" --dry-run --verbose"
-          fi
-          echo "Running: $CMD"
-          # expose DRY_RUN to all later steps
-          echo "DRY_RUN=$DRY_RUN" >> $GITHUB_ENV
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-          $CMD
-
-      - name: Update uv.lock
-        run: uv lock
-
-      - name: Commit and tag release
-        if: env.DRY_RUN == 'false'
-        run: |
-          git add pyproject.toml src/cpax/__init__.py uv.lock
-          git commit -m "Release: ${NEW_VERSION}"
-          git tag "v${NEW_VERSION}"
-
-      - name: Push changes
-        if: env.DRY_RUN == 'false'
-        run: git push origin HEAD --follow-tags
+          set -euo pipefail
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml uv.lock
+          git diff --cached --check
+          git diff --cached --quiet && { echo "::error::No release changes"; exit 1; }
+          git commit -m "Release: $VERSION"
+          git tag -a "v$VERSION" -m "CPax v$VERSION"
+          AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $AUTH_HEADER" \
+            push --atomic origin HEAD:refs/heads/main "refs/tags/v$VERSION"
