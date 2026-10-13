@@ -39,9 +39,9 @@ is `[project].version` in `pyproject.toml`; `cpax.__version__` is read from
 installed distribution metadata. The historical `v2025.05.0` tag is preserved.
 
 To prepare a release, navigate to **Actions → Manual CalVer Release → Run workflow**
-on GitHub and select `main`. Leave **dry_run** selected (the default) to
-preview the proposed version and run release validation in a temporary checkout.
-The dry run does not create commits, tags, or remote changes.
+on GitHub. Dry runs can use `main` or a feature branch: leave **dry_run**
+selected (the default) to validate a release in a temporary checkout without
+commits, tags, or remote changes. Publishing requires selecting `main`.
 
 To publish, run the same workflow with **dry_run** disabled. It checks that
 `main` has not changed, computes the next calendar version, updates

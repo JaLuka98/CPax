@@ -359,6 +359,7 @@ lint = [
     { name = "ty" },
 ]
 test = [
+    { name = "bump-my-version" },
     { name = "packaging" },
     { name = "pytest" },
 ]
@@ -396,6 +397,7 @@ lint = [
     { name = "ty", specifier = "==0.0.84" },
 ]
 test = [
+    { name = "bump-my-version" },
     { name = "packaging", specifier = ">=24" },
     { name = "pytest" },
 ]
