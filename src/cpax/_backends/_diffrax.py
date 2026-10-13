@@ -66,9 +66,11 @@ def solve_diffrax(
     )
     # Keep the numerical status JAX-traceable: never convert the result
     # to a Python boolean/string inside a compiled integration.
-    result_code = jnp.asarray(backend_solution.result)
+    # Diffrax returns an Equinox EnumerationItem, not a numeric JAX array.
+    # Its comparison operator yields a JAX-compatible scalar. Preserve the
+    # original result in metadata to retain precise backend failure reasons.
     status = jnp.where(
-        result_code == diffrax.RESULTS.successful,
+        backend_solution.result == diffrax.RESULTS.successful,
         int(SolutionStatus.SUCCESS),
         int(SolutionStatus.FAILED),
     )
@@ -81,6 +83,6 @@ def solve_diffrax(
             "backend": "diffrax",
             "solver": type(solver).__name__,
             "stepsize_controller": type(stepsize_controller).__name__,
-            "backend_result": result_code,
+            "backend_result": backend_solution.result,
         },
     )
