@@ -1,6 +1,8 @@
 # cpax/__init__.py
 
-__version__ = "2025.05.0"
+from importlib.metadata import version as _distribution_version
+
+__version__ = _distribution_version("CPax")
 
 # Keep the legacy ODE interface available while introducing physics-first APIs.
 from . import dynamics, ode
