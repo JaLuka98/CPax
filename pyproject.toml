@@ -54,11 +54,9 @@ dev = [
 "Tracker" = "https://github.com/JaLuka98/CPax/issues"
 
 
-# Calendar versioning: YYYY.M.N, where N starts at zero each month.
-# project.version above is the single authoritative version (no current_version here).
+# CalVer: YYYY.M.N (N is a sequence number within each calendar month).
 [tool.bumpversion]
-parse = '^(?P<release>[1-9][0-9]{3}\.(?:1[0-2]|0?[1-9]))\.(?P<patch>[0-9]+)
-target-version = "py312"
+parse = '^(?P<release>[1-9][0-9]{3}\.(?:1[0-2]|0?[1-9]))\.(?P<patch>[0-9]+)target-version = "py312"
 line-length = 119
 
 [tool.ruff.lint]
