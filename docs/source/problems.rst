@@ -37,9 +37,28 @@ meaning. Nested tuples and mappings are preserved.
 Time endpoints must be scalar, finite and increasing: currently
 ``t_span=(t0, t1)`` requires ``t1 > t0``. Checks of concrete time
 values take place when constructing the problem. For JAX-traced times,
-value-dependent checks are deferred to the eventual solver. Model-specific
+value-dependent checks are deferred to the solver. Model-specific
 coordinate domains are not validated by ``IVP``.
 
-An IVP stores a mathematical problem; constructing one **does not**
-perform numerical integration. The ``cpax.solve`` API is planned for
-issue #37. The physical system is backend-independent.
+Solving a problem
+-----------------
+
+Constructing an ``IVP`` does **not** perform integration. Supply it
+to ``cpax.solve`` together with a concrete numerical algorithm:
+
+.. code-block:: python
+
+   import cpax
+   import diffrax
+
+   solution = cpax.solve(
+       problem,
+       solver=diffrax.Tsit5(),
+       saveat=cpax.SaveAt.linspace(101),
+   )
+   times, values = solution.ts, solution.ys
+
+The problem and system remain independent of the solver backend.
+Read :doc:`solvers` for numerical method selection, step-size control,
+output sampling and failure handling, and :doc:`results` for the
+returned solution structure.

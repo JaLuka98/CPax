@@ -1,21 +1,29 @@
-.. CPax documentation master file, created by
-   sphinx-quickstart on Mon Mar 31 23:52:35 2025.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 CPax documentation
 ==================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+CPax is a JAX-based computational physics library. It lets you define continuous-time equations of
+motion, construct an initial-value problem (IVP), integrate it using
+Diffrax, and inspect a structured numerical solution.
 
+The core separation is **System → Problem → Solver → Solution**.
+Physical equations are independent of numerical integration; this
+workflow currently supports continuous-time IVPs. PDEs,
+boundary-value problems, or Monte Carlo algorithms are not yet supported.
+
+Start with :doc:`dynamics` to define a system, then :doc:`problems`
+and :doc:`solvers` for a complete simulation. See :doc:`results`
+for trajectory shapes, numerical diagnostics, and failure handling.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Guides
 
-   leapfrog
    dynamics
    problems
+   solvers
    results
+   leapfrog
+
+The :doc:`leapfrog` page documents a separate legacy, symplectic
+integrator. It remains supported while CPax develops its new
+physics-oriented interfaces.

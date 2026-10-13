@@ -1,5 +1,77 @@
 # CPax
-Computational Physics with Jax
+
+**CPax** is an open-source, JAX-based library for computational physics.
+It aims to provide reusable physical models, numerical simulation workflows,
+and differentiable scientific computing tools. The current physics-first API
+supports continuous-time initial-value problems (IVPs) using
+[Diffrax](https://docs.kidger.site/diffrax/) for numerical integration.
+Other physical models and simulation methods remain under development.
+
+- **Documentation:** https://cpax.readthedocs.io/en/latest/index.html
+
+## Quickstart: harmonic oscillator
+
+Define a system, specify an initial-value problem, choose a solver, and
+inspect the resulting trajectory. For a unit-mass harmonic oscillator,
+`dq/dt = p` and `dp/dt = -k q`:
+
+```python
+import cpax
+import diffrax
+import jax.numpy as jnp
+
+from cpax.dynamics import VectorFieldSystem
+
+
+def oscillator(t, state, args):
+    del t  # The equations do not depend explicitly on time.
+    q, p = state
+    return p, -args["k"] * q
+
+
+system = VectorFieldSystem(oscillator)
+
+problem = cpax.IVP(
+    system=system,
+    y0=(jnp.array(1.0), jnp.array(0.0)),
+    t_span=(0.0, 10.0),
+    args={"k": jnp.array(1.0)},
+)
+
+solution = cpax.solve(
+    problem,
+    solver=diffrax.Tsit5(),
+    saveat=cpax.SaveAt.linspace(1000),
+)
+
+q, p = solution.ys
+print("Integration successful:", bool(solution.is_success))
+print("Saved points:", solution.ts.shape[0])
+```
+
+The state is a tuple of coordinates and momenta, and the saved trajectory
+preserves that structure: both `q` and `p` have shape `(1000,)`.
+Use `solution.ts`, `q`, and `p` for time series or a phase-space plot.
+
+The four layers are **System → Problem → Solver → Solution**. A system
+describes equations of motion; an `IVP` supplies initial conditions and
+an interval; `cpax.solve` handles integration; `Solution` contains saved
+states, status, and diagnostics. A native Diffrax solver must currently
+be selected explicitly; automatic solver selection is not implemented yet.
+
+## Documentation
+
+- [Continuous-time dynamical systems](docs/source/dynamics.rst): vector fields,
+  system parameters and JAX-compatible states.
+- [Initial-value problems](docs/source/problems.rst): initial conditions and
+  problem validation.
+- [Solving IVPs](docs/source/solvers.rst): solver choices, sampling, tolerances,
+  failure handling and JAX transformations.
+- [Numerical solutions](docs/source/results.rst): saved trajectories, statuses
+  and diagnostic information.
+
+The existing `cpax.ode` integrators, including leapfrog, remain available
+during the transition to the physics-first interfaces.
 
 ## Development
 
@@ -20,16 +92,6 @@ Run `uv run ruff check --fix .` to fix safe lint issues and
 available via `uvx pre-commit install`, or can be run without installation
 using `uvx pre-commit run --all-files`. Type checking currently covers the
 library under `src/`; tests and examples are linted and formatted.
-
-## Continuous-time dynamics
-
-Define equations of motion using `cpax.dynamics.VectorFieldSystem`, or
-subclass `cpax.dynamics.DynamicalSystem` to represent physical models with
-array-valued parameters. See the
-[continuous-time dynamics documentation](docs/source/dynamics.rst) for the
-interface, PyTree states and supported JAX transformation conventions.
-The existing `cpax.ode` integration utilities remain available.
-
 
 ## Releases
 

@@ -7,3 +7,4 @@ __version__ = _distribution_version("CPax")
 # Keep the legacy ODE interface available while introducing physics-first APIs.
 from . import dynamics, ode
 from .problems import IVP
+from .solvers import SaveAt, solve
