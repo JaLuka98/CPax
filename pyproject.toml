@@ -29,6 +29,8 @@ dependencies = [
 
 [dependency-groups]
 test = [
+  "bump-my-version",
+  "packaging>=24",
   "pytest",
 ]
 lint = [
@@ -46,13 +48,27 @@ dev = [
   { include-group = "test" },
   { include-group = "lint" },
   { include-group = "docs" },
-  "bump-my-version",
 ]
 
 [project.urls]
 "Source" = "https://github.com/JaLuka98/CPax"
 "Tracker" = "https://github.com/JaLuka98/CPax/issues"
 
+
+[tool.bumpversion]
+parse = '^(?P<release>[1-9][0-9]{3}\.(?:1[0-2]|0?[1-9]))\.(?P<patch>[0-9]+)$'
+serialize = ["{release}.{patch}"]
+commit = false
+tag = false
+tag_name = "v{new_version}"
+
+[tool.bumpversion.parts.release]
+calver_format = "{YYYY}.{MM}"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
 [tool.ruff]
 target-version = "py312"
 line-length = 119
