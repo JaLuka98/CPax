@@ -5,6 +5,8 @@ import tomllib
 from importlib.metadata import version
 from pathlib import Path
 
+from packaging.version import Version
+
 import cpax
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,8 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_single_source_version() -> None:
     with (ROOT / "pyproject.toml").open("rb") as file:
         project = tomllib.load(file)["project"]
-    assert tuple(map(int, cpax.__version__.split("."))) == tuple(map(int, project["version"].split(".")))
-    assert tuple(map(int, version("CPax").split("."))) == tuple(map(int, project["version"].split(".")))
+    assert Version(cpax.__version__) == Version(project["version"])
+    assert Version(version("CPax")) == Version(project["version"])
 
 
 def test_calver_configuration_accepts_historical_and_new_versions() -> None:

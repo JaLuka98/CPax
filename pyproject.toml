@@ -29,6 +29,7 @@ dependencies = [
 
 [dependency-groups]
 test = [
+  "packaging>=24",
   "pytest",
 ]
 lint = [

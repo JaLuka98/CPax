@@ -338,6 +338,7 @@ dependencies = [
 dev = [
     { name = "bump-my-version" },
     { name = "myst-parser" },
+    { name = "packaging" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "sphinx" },
@@ -358,6 +359,7 @@ lint = [
     { name = "ty" },
 ]
 test = [
+    { name = "packaging" },
     { name = "pytest" },
 ]
 
@@ -373,6 +375,7 @@ requires-dist = [
 dev = [
     { name = "bump-my-version" },
     { name = "myst-parser" },
+    { name = "packaging", specifier = ">=24" },
     { name = "pytest" },
     { name = "ruff", specifier = "==0.16.10" },
     { name = "sphinx", specifier = ">=5.0" },
@@ -392,7 +395,10 @@ lint = [
     { name = "ruff", specifier = "==0.16.10" },
     { name = "ty", specifier = "==0.0.84" },
 ]
-test = [{ name = "pytest" }]
+test = [
+    { name = "packaging", specifier = ">=24" },
+    { name = "pytest" },
+]
 
 [[package]]
 name = "cycler"
