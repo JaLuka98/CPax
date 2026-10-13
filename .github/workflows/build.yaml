@@ -30,10 +30,9 @@ jobs:
           from importlib.metadata import version
           import tomllib
           import cpax
-          from packaging.version import Version
 
           with open("pyproject.toml", "rb") as file:
               expected = tomllib.load(file)["project"]["version"]
-          assert Version(cpax.__version__) == Version(expected)
-          assert Version(version("CPax")) == Version(expected)
+          assert tuple(map(int, cpax.__version__.split("."))) == tuple(map(int, expected.split(".")))
+          assert tuple(map(int, version("CPax").split("."))) == tuple(map(int, expected.split(".")))
           PY
