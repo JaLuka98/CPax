@@ -293,4 +293,3 @@ def test_float64_decay_preserves_precision_and_matches_analytical_solution():
         assert bool(solution.is_success)
         expected = 2.0 * np.exp(-0.5 * np.asarray(solution.ts))
         np.testing.assert_allclose(solution.ys, expected, rtol=1e-9, atol=1e-10)
-
