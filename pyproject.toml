@@ -54,42 +54,8 @@ dev = [
 "Tracker" = "https://github.com/JaLuka98/CPax/issues"
 
 
-# CalVer: YYYY.M.N (N is a sequence number within each calendar month).
 [tool.bumpversion]
-parse = '^(?P<release>[1-9][0-9]{3}\.(?:1[0-2]|0?[1-9]))\.(?P<patch>[0-9]+)target-version = "py312"
-line-length = 119
-
-[tool.ruff.lint]
-select = [
-  "E4",   # Import conventions
-  "E7",   # Statement conventions
-  "E9",   # Syntax errors
-  "F",    # Pyflakes
-  "I",    # isort
-  "UP",   # Modern Python syntax
-  "B",    # flake8-bugbear
-  "SIM",  # flake8-simplify
-  "C4",   # flake8-comprehensions
-  "PIE",  # flake8-pie
-  "RUF",  # Ruff-specific correctness checks
-  "NPY",  # NumPy correctness
-  "PERF", # Perflint
-]
-
-[tool.ruff.lint.per-file-ignores]
-"src/cpax/__init__.py" = ["F401"]
-"src/cpax/ode/__init__.py" = ["F401"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-docstring-code-format = true
-
-# Type-check the public library. Tests and examples can be added after the
-# scientific API has been fully annotated.
-[tool.ty.src]
-include = ["src"]
-
+parse = '^(?P<release>[1-9][0-9]{3}\.(?:1[0-2]|0?[1-9]))\.(?P<patch>[0-9]+)$'
 serialize = ["{release}.{patch}"]
 commit = false
 tag = false
@@ -102,7 +68,6 @@ calver_format = "{YYYY}.{MM}"
 filename = "pyproject.toml"
 search = 'version = "{current_version}"'
 replace = 'version = "{new_version}"'
-
 [tool.ruff]
 target-version = "py312"
 line-length = 119
