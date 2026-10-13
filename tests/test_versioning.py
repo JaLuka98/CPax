@@ -79,9 +79,7 @@ def test_bump_my_version_same_month(tmp_path: Path) -> None:
     from datetime import UTC, datetime
 
     now = datetime.now(UTC)
-    assert _bump_in_temporary_repo(tmp_path, f"{now.year}.{now.month}.3", "patch") == (
-        f"{now.year}.{now.month}.4"
-    )
+    assert _bump_in_temporary_repo(tmp_path, f"{now.year}.{now.month}.3", "patch") == (f"{now.year}.{now.month}.4")
 
 
 def test_bump_my_version_month_rollover(tmp_path: Path) -> None:
@@ -100,9 +98,7 @@ def test_bump_my_version_year_rollover(tmp_path: Path) -> None:
     from datetime import UTC, datetime
 
     now = datetime.now(UTC)
-    assert _bump_in_temporary_repo(tmp_path, f"{now.year - 1}.12.7", "release") == (
-        f"{now.year}.{now.month}.0"
-    )
+    assert _bump_in_temporary_repo(tmp_path, f"{now.year - 1}.12.7", "release") == (f"{now.year}.{now.month}.0")
 
 
 def test_bump_my_version_legacy_zero_padded_month(tmp_path: Path) -> None:
