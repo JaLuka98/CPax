@@ -39,6 +39,7 @@ def test_calver_configuration_accepts_historical_and_new_versions() -> None:
     for invalid in ("2026.00.0", "2026.13.0", "2026.010.1", "26.10.0", "2026.10.-1"):
         assert re.fullmatch(config["parse"], invalid) is None, invalid
 
+
 def _bump_in_temporary_repo(tmp_path: Path, current: str, part: str) -> str:
     """Run the installed bump-my-version CLI against a disposable copy of CPax."""
     import subprocess
