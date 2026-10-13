@@ -7,6 +7,8 @@ supports continuous-time initial-value problems (IVPs) using
 [Diffrax](https://docs.kidger.site/diffrax/) for numerical integration.
 Other physical models and simulation methods remain under development.
 
+- **Documentation:** https://cpax.readthedocs.io/en/latest/index.html
+
 ## Quickstart: harmonic oscillator
 
 Define a system, specify an initial-value problem, choose a solver, and

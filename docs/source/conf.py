@@ -44,6 +44,9 @@ autoapi_ignore = ["*/__main__.py", "*/tests/*", "*/_backends/*"]
 templates_path = ["_templates"]
 exclude_patterns = []
 
+# Autoapi configuration: do not include private backends in the documentation
+suppress_warnings = ["autoapi.python_import_resolution"]
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 

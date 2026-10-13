@@ -9,8 +9,7 @@ All such systems share the abstract
 
 Most users do not need to subclass ``DynamicalSystem`` themselves.
 For arbitrary equations of motion, ``VectorFieldSystem`` provides the
-simplest starting point. It is just a concrete implementation of the same
-interface, **not a different kind of physical system**.
+simplest starting point.
 
 Defining equations of motion
 ----------------------------
