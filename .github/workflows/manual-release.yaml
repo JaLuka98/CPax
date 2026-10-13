@@ -10,23 +10,26 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: cpax-manual-release
   cancel-in-progress: false
 
 jobs:
-  release:
+  prepare:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      base_sha: ${{ steps.base.outputs.sha }}
     steps:
-      - name: Enforce main
+      - name: Require main for an actual release
         if: ${{ !inputs.dry_run }}
         env:
           REF: ${{ github.ref }}
         run: |
-          test "$REF" = "refs/heads/main" || { echo "::error::Select main"; exit 1; }
+          test "$REF" = "refs/heads/main" || { echo "::error::Select main to publish"; exit 1; }
 
       - uses: actions/checkout@v7
         with:
@@ -34,14 +37,20 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Reject stale checkout
-        if: ${{ !inputs.dry_run }}
+      - name: Record source revision and reject stale releases
+        id: base
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          git fetch origin main --no-tags
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
-            echo "::error::main changed; rerun this workflow"
-            exit 1
-          }
+          set -euo pipefail
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [[ "$DRY_RUN" != "true" ]]; then
+            git fetch origin main --no-tags
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+              echo "::error::main changed; rerun this workflow"
+              exit 1
+            }
+          fi
 
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
@@ -52,24 +61,95 @@ jobs:
         run: uv sync --locked --no-default-groups --group dev
 
       - name: Prepare and validate release in disposable checkout
+        run: bash scripts/manual_release.sh
         env:
           DRY_RUN: ${{ inputs.dry_run }}
-        run: bash scripts/manual_release.sh
 
-      - name: Publish release commit and annotated tag
+      - name: Expose validated version
+        id: validate
+        run: |
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload validated release files
         if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: cpax-validated-release
+          path: |
+            pyproject.toml
+            uv.lock
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    if: ${{ !inputs.dry_run }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Reject stale publication
         env:
+          BASE_SHA: ${{ needs.prepare.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin main --no-tags
+          test "$(git rev-parse HEAD)" = "$BASE_SHA" || { echo "::error::Source revision changed"; exit 1; }
+          test "$(git rev-parse origin/main)" = "$BASE_SHA" || { echo "::error::main advanced; rerun"; exit 1; }
+
+      - name: Download validated release files
+        uses: actions/download-artifact@v8
+        with:
+          name: cpax-validated-release
+          path: .
+
+      - name: Verify publication metadata
+        env:
+          EXPECTED_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import tomllib
+          from datetime import datetime, timezone
+          with open('pyproject.toml', 'rb') as file:
+              new = tomllib.load(file)['project']['version']
+          with open('uv.lock', 'rb') as file:
+              locked = tomllib.load(file)
+          assert new == os.environ['EXPECTED_VERSION']
+          now = datetime.now(timezone.utc)
+          year, month, _ = map(int, new.split('.'))
+          assert (year, month) == (now.year, now.month), 'UTC month changed; rerun'
+          cpax = next(p for p in locked['package'] if p['name'] == 'cpax')
+          assert tuple(map(int, cpax['version'].split('.'))) == tuple(map(int, new.split('.')))
+          PY
+          git diff --check
+          if git show-ref --verify --quiet "refs/tags/v${EXPECTED_VERSION}" ||
+             git ls-remote --exit-code --tags origin "refs/tags/v${EXPECTED_VERSION}" >/dev/null; then
+            echo "::error::Release tag already exists"
+            exit 1
+          fi
+
+      - name: Commit and atomically publish
+        env:
+          EXPECTED_VERSION: ${{ needs.prepare.outputs.version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml uv.lock
+          git add -- pyproject.toml uv.lock
           git diff --cached --check
-          git diff --cached --quiet && { echo "::error::No release changes"; exit 1; }
-          git commit -m "Release: $VERSION"
-          git tag -a "v$VERSION" -m "CPax v$VERSION"
+          git diff --cached --quiet && { echo "::error::No changes"; exit 1; }
+          git commit -m "Release: $EXPECTED_VERSION"
+          git tag -a "v$EXPECTED_VERSION" -m "CPax v$EXPECTED_VERSION"
           AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $AUTH_HEADER" \
-            push --atomic origin HEAD:refs/heads/main "refs/tags/v$VERSION"
+            push --atomic origin HEAD:refs/heads/main "refs/tags/v$EXPECTED_VERSION"
