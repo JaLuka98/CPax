@@ -8,11 +8,12 @@ import jax.numpy as jnp
 import numpy as np
 from jax.core import Tracer
 
+from cpax.dynamics._systems import Time
 from cpax.problems import IVP
 from cpax.results import Solution, SolutionStatus
 
 
-def _resolve_saveat(policy: Any, t_span: tuple[jax.Array, jax.Array]) -> diffrax.SaveAt:
+def _resolve_saveat(policy: Any, t_span: tuple[Time, Time]) -> diffrax.SaveAt:
     """Resolve a CPax sampling policy against its problem's interval."""
     t0, t1 = t_span
 
@@ -50,9 +51,19 @@ def solve_diffrax(
     throw: bool,
 ) -> Solution:
     """Translate a CPax IVP into a Diffrax solve and back into CPax."""
+
+    def vector_field(
+        t: float | jax.Array | np.ndarray,
+        state: Any,
+        args: Any,
+        /,
+    ) -> Any:
+        """Adapt Diffrax's scalar-like time input to CPax's time interface."""
+        return problem.system.vector_field(jnp.asarray(t), state, args)
+
     t0, t1 = problem.t_span
     backend_solution = diffrax.diffeqsolve(
-        terms=diffrax.ODETerm(problem.system.vector_field),
+        terms=diffrax.ODETerm(vector_field),
         solver=solver,
         t0=t0,
         t1=t1,

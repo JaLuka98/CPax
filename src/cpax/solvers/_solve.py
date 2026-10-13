@@ -1,7 +1,6 @@
 """Public IVP numerical integration API."""
 
 from numbers import Integral
-from typing import Any
 
 import diffrax
 import jax

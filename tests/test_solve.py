@@ -197,7 +197,7 @@ def test_non_raising_failure_preserves_failed_status_and_diagnostics():
 
 
 def test_throw_true_reports_solver_failure():
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError, match="maximum number of solver steps"):
         cpax.solve(
             _decay_problem(t_span=(0.0, 10.0)),
             solver=diffrax.Tsit5(),
