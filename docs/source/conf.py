@@ -39,7 +39,7 @@ extensions = [
 
 autoapi_type = "python"
 autoapi_dirs = ["../../src"]
-autoapi_ignore = ["*/__main__.py", "*/tests/*"]
+autoapi_ignore = ["*/__main__.py", "*/tests/*", "*/_backends/*"]
 
 templates_path = ["_templates"]
 exclude_patterns = []

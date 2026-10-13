@@ -2,51 +2,90 @@ Numerical solutions
 ===================
 
 ``cpax.results.Solution`` defines a backend-independent representation
-for saved IVP trajectories, numerical outcomes and diagnostics.
+for saved IVP trajectories, numerical outcomes and diagnostics. It is
+returned by ``cpax.solve``:
 
 .. code-block:: python
 
+   import cpax
+   import diffrax
    import jax.numpy as jnp
-   from cpax.results import Solution, SolutionStatus
+   from cpax.dynamics import VectorFieldSystem
 
-   trajectory = Solution(
-       ts=jnp.array([0.0, 0.5, 1.0]),
-       ys=jnp.array([1.0, 0.78, 0.61]),
-       status=SolutionStatus.SUCCESS,
-       stats={"num_steps": jnp.array(12)},
-       metadata={"solver": "example"},
+   def decay(t, y, args):
+       del t
+       return -args["rate"] * y
+
+   problem = cpax.IVP(
+       system=VectorFieldSystem(decay),
+       y0=jnp.array(1.0),
+       t_span=(0.0, 2.0),
+       args={"rate": jnp.array(0.5)},
+   )
+   solution = cpax.solve(
+       problem,
+       solver=diffrax.Tsit5(),
+       saveat=cpax.SaveAt.linspace(21),
    )
 
-   success = trajectory.is_success
+   times = solution.ts       # Shape (21,)
+   values = solution.ys      # Shape (21,)
+   success = solution.is_success
+
+Saved states
+------------
 
 ``ts`` is a nonempty one-dimensional array with shape ``(N,)``.
-``ys`` is an array or arbitrary non-empty PyTree of arrays; each leaf
-must have leading dimension ``N``. For example, a position leaf with
-initial shape ``(3,)`` has trajectory shape ``(N, 3)``.
+``ys`` is an array or arbitrary non-empty PyTree of arrays; each
+leaf has leading sample dimension ``N`` and retains the initial
+state leaf's remaining dimensions.
 
-``SolutionStatus.SUCCESS`` and ``SolutionStatus.FAILED`` are
-backend-independent integer outcomes; ``is_success`` returns a
-JAX-compatible Boolean scalar. ``stats`` stores solver statistics, and
-``metadata`` stores descriptive information such as algorithm identity.
-Numerical backends will populate these fields in subsequent issues.
-Non-array metadata may require ``equinox.filter_jit`` if a Solution
-is passed through compiled transformations.
+For example, a state ``(q, p)`` consisting of two scalar leaves
+produces a saved trajectory ``(qs, ps)`` in which both arrays have
+shape ``(N,)``. A vector leaf initially shaped ``(3,)`` becomes
+a trajectory shaped ``(N, 3)``. CPax does not force users to flatten
+states into one array.
 
-The container checks shapes, numeric types and concrete status codes,
-but intentionally does not infer whether the solver actually reached the
-final time. Failed integrations may produce incomplete, padded or
-non-finite trajectories. The integration backend is responsible for
-reporting meaningful failures and diagnostics.
+Sampling is controlled by :doc:`solvers` through ``cpax.SaveAt``.
+By default only the final state is saved. ``SaveAt.linspace(n)``
+includes both interval endpoints, while ``SaveAt.at(times)`` saves
+at explicitly specified times. The initial state is not automatically
+included under every policy.
 
-Sampling conventions
---------------------
+Status and diagnostics
+----------------------
 
-Whether ``t0`` is included in a returned trajectory depends on the
-requested save policy; the initial state is always specified by the
-problem, not implicitly inserted into ``Solution``. Save policies will
-be introduced in issue #37. The save times and saved states are paired
-one-to-one in their leading dimension. Solver-provided valid sampling
-order and endpoint coverage will be documented with the numerical solver.
+The ``status`` is an integer scalar corresponding to
+``cpax.results.SolutionStatus.SUCCESS`` or ``SolutionStatus.FAILED``.
+``is_success`` provides a JAX-compatible Boolean indicator.
 
-``Solution`` intentionally has no plotting, interpolation or physical
-energy-analysis methods at this stage.
+``stats`` is a dictionary of integration diagnostics, typically
+including ``num_steps``, ``num_accepted_steps``, and
+``num_rejected_steps``. ``metadata`` describes the actual
+backend and algorithm. For the current Diffrax adapter, it contains
+``backend``, ``solver``, ``stepsize_controller``, and
+``backend_result``. The last entry is the original Diffrax
+``RESULTS`` value, not a plain numeric array.
+
+.. code-block:: python
+
+   print(bool(solution.is_success))
+   print(solution.stats["num_steps"])
+   print(solution.metadata["solver"])
+   print(solution.metadata["backend_result"])
+
+``throw=True`` makes a failed integration raise by default. With
+``throw=False`` a failure is represented in the returned status
+and diagnostics. A failed integration can return partial, padded or
+non-finite samples; the ``Solution`` class intentionally validates
+structure rather than physical accuracy or endpoint coverage.
+**Do not treat the saved trajectory as valid without checking the status.**
+
+The container is an Equinox PyTree, but non-array metadata can limit
+how a complete ``Solution`` object is passed through raw JAX
+transformations. Returning numerical leaves from a compiled function
+or using Equinox's filtered transformations is often appropriate.
+
+``Solution`` currently does not implement plotting, continuous
+interpolation, or physical energy analysis methods. Consult
+:doc:`solvers` for numerical accuracy and diagnostic conventions.

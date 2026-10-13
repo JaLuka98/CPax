@@ -270,3 +270,27 @@ def test_complex_state_with_complex_compatible_solver():
 
     assert solution.ys.dtype.kind == "c"
     np.testing.assert_allclose(solution.ys[-1], np.exp(1j), rtol=5e-4, atol=5e-4)
+
+
+def test_float64_decay_preserves_precision_and_matches_analytical_solution():
+    """Check a float64 IVP without changing JAX precision for other tests."""
+    with jax.enable_x64(True):
+        problem = cpax.IVP(
+            system=VectorFieldSystem(_decay),
+            y0=jnp.asarray(2.0, dtype=jnp.float64),
+            t_span=(0.0, 2.0),
+            args={"rate": jnp.asarray(0.5, dtype=jnp.float64)},
+        )
+        solution = cpax.solve(
+            problem,
+            solver=diffrax.Tsit5(),
+            saveat=cpax.SaveAt.linspace(11),
+            rtol=1e-10,
+            atol=1e-12,
+        )
+        assert solution.ts.dtype == jnp.float64
+        assert solution.ys.dtype == jnp.float64
+        assert bool(solution.is_success)
+        expected = 2.0 * np.exp(-0.5 * np.asarray(solution.ts))
+        np.testing.assert_allclose(solution.ys, expected, rtol=1e-9, atol=1e-10)
+

@@ -47,9 +47,10 @@ Its derivative must have the **same PyTree structure and leaf shapes**.
 Time is the first argument even for autonomous systems. The optional
 ``args`` provides parameters or other data for individual evaluations.
 
-This interface only evaluates the equations of motion; it does not
-integrate trajectories. Problems, solvers and solutions will be introduced
-in their respective packages.
+This interface evaluates equations of motion without integrating them.
+Use :doc:`problems` to specify initial conditions and a time interval,
+:doc:`solvers` to integrate the system, and :doc:`results` to inspect
+the saved trajectory and numerical diagnostics.
 
 Specialised physical systems
 ----------------------------
@@ -92,8 +93,9 @@ Dependency boundaries
 ---------------------
 
 The intended public namespaces are ``dynamics``, ``mechanics``,
-``problems``, ``solvers`` and ``results``. Only implemented packages
-are created:
+``problems``, ``solvers`` and ``results``. The ``mechanics``
+package remains planned; the others are implemented for continuous-time
+IVPs:
 
 * ``dynamics`` provides shared continuous-time abstractions using JAX
   and Equinox, without importing concrete physical models or solvers.
