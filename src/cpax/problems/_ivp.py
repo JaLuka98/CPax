@@ -91,6 +91,7 @@ class IVP(eqx.Module):
                 "Could not evaluate the system's vector field with the "
                 "provided initial state y0 and args. Check their compatibility "
                 "and ensure the vector field supports JAX tracing."
+                f"Original error: {exc}"
             ) from exc
 
         # Verify PyTree structure.

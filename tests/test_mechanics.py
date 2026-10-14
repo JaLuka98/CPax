@@ -105,9 +105,9 @@ def test_non_none_ivp_args_are_rejected():
         HamiltonianSystem(hamiltonian=lambda q, p: q**2 + p**2),
     ]
     for system in systems:
-        with pytest.raises(ValueError, match="IVP.args"):
+        with pytest.raises(ValueError, match=r"IVP\.args"):
             system.vector_field(0.0, state, {"k": 1.0})
-        with pytest.raises(ValueError, match="IVP.args"):
+        with pytest.raises(ValueError, match=r"IVP\.args"):
             cpax.IVP(system, state, (0.0, 1.0), args={"k": 1.0})
 
 
@@ -181,10 +181,12 @@ def test_differentiate_mass_and_initial_coordinate():
         return cpax.solve(problem, solver=diffrax.Tsit5(), rtol=1e-7, atol=1e-9).ys.q[-1]
 
     m = jnp.array(2.0)
-    np.testing.assert_allclose(jax.grad(final_position, argnums=0)(m, jnp.array(1.0)),
-                               jnp.sin(jnp.sqrt(1 / m)) / (2 * m**1.5), rtol=3e-3)
-    np.testing.assert_allclose(jax.grad(final_position, argnums=1)(m, jnp.array(1.0)),
-                               jnp.cos(jnp.sqrt(1 / m)), rtol=3e-3)
+    np.testing.assert_allclose(
+        jax.grad(final_position, argnums=0)(m, jnp.array(1.0)), jnp.sin(jnp.sqrt(1 / m)) / (2 * m**1.5), rtol=3e-3
+    )
+    np.testing.assert_allclose(
+        jax.grad(final_position, argnums=1)(m, jnp.array(1.0)), jnp.cos(jnp.sqrt(1 / m)), rtol=3e-3
+    )
 
 
 def test_equinox_parameter_module_transformations():
