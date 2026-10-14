@@ -3,7 +3,6 @@
 from collections.abc import Callable
 from typing import Any
 
-import equinox as eqx
 import jax
 
 from cpax.dynamics import DynamicalSystem
