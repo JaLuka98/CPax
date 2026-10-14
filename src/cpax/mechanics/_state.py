@@ -1,11 +1,11 @@
 """Canonical phase-space state representation."""
 
+from numbers import Number
 from typing import Any
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from numbers import Number
 
 
 def _as_coordinate(value: Any, name: str) -> jax.Array:
