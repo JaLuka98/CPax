@@ -54,11 +54,12 @@ the saved trajectory and numerical diagnostics.
 Specialised physical systems
 ----------------------------
 
-CPax will also provide ready-made models, such as the planned
-``cpax.mechanics.NewtonianSystem`` and ``HamiltonianSystem``.
-They will implement ``DynamicalSystem`` while exposing physically
-meaningful inputs such as potentials, masses or Hamiltonians, and potentially
-quantities such as energy.
+CPax provides specialised models in :doc:`mechanics`:
+``NewtonianSystem`` describes conservative Newtonian dynamics from a
+potential and masses, while ``HamiltonianSystem`` implements canonical
+Hamilton equations. Both implement ``DynamicalSystem`` and provide
+energy diagnostics. ``PhaseSpaceState`` represents canonical coordinates
+and conjugate momenta.
 
 Library developers and advanced users can subclass ``DynamicalSystem``
 when a specialised model warrants its own methods and parameters. Whether
@@ -68,11 +69,12 @@ class, numerical solvers will see the **same** ``vector_field`` interface.
 Parameters and JAX transformations
 ----------------------------------
 
-Model parameters may be stored as array-valued Equinox module fields
-(e.g. a spring constant ``self.k``) or supplied at evaluation time
-through ``args``. This is a choice about where parameters live, not a
-distinction between the two system classes. A ``VectorFieldSystem``
-can also wrap a callable Equinox module containing differentiable fields.
+A ``VectorFieldSystem`` can receive parameters through evaluation-time
+``args`` or wrap an Equinox module containing differentiable array fields.
+The autonomous mechanics models instead store their physical parameters in
+``system.params`` and deliberately reject non-``None`` ``IVP.args``.
+See :doc:`mechanics` for the supported plain-function signatures and
+differentiable parameter examples.
 
 Pure JAX-traceable vector fields support transformations such as
 ``jax.jit``, ``jax.vmap`` and differentiation where applicable.
@@ -83,21 +85,24 @@ non-array leaves as a function argument**, prefer
 differentiate its floating-point array-valued parameters. The wrapper's
 ``rhs`` field is intentionally not static.
 
-Evaluation does not perform per-call validation of state structure.
-Model authors must return consistent derivatives. Physical domains,
+The generic ``VectorFieldSystem`` does not validate state structure on
+every evaluation; model authors must return consistent derivatives.
+``IVP`` checks derivative structure and shapes at construction, while
+specialised models may perform additional validation. Physical domains,
 boundary conditions and numerical failures belong to the relevant model
 and solver interfaces.
 
 Dependency boundaries
 ---------------------
 
-The intended public namespaces are ``dynamics``, ``mechanics``,
-``problems``, ``solvers`` and ``results``. The ``mechanics``
-package remains planned; the others are implemented for continuous-time
-IVPs:
+The current public namespaces include ``dynamics``, ``mechanics``,
+``problems``, ``solvers`` and ``results``. They support continuous-time
+IVPs and the present classical-mechanics models:
 
 * ``dynamics`` provides shared continuous-time abstractions using JAX
   and Equinox, without importing concrete physical models or solvers.
+* ``mechanics`` provides canonical phase-space states and autonomous
+  Newtonian/Hamiltonian models without depending on numerical solvers.
 * Physical-domain packages may depend on ``dynamics``, but not vice versa.
 * Problems combine systems with conditions without depending on a specific
   numerical backend.

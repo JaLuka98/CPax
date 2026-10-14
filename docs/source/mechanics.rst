@@ -1,15 +1,15 @@
 Classical mechanics
 ===================
 
-The `cpax.mechanics` namespace provides canonical phase-space states and
+The ``cpax.mechanics`` namespace provides canonical phase-space states and
 autonomous Newtonian and Hamiltonian models. These are physical systems,
 independent of the numerical solver. They integrate with the usual
-`cpax.IVP`, `cpax.solve` and `Solution` workflow.
+``cpax.IVP``, ``cpax.solve`` and ``Solution`` workflow.
 
 Parameterised Newtonian potential
 ---------------------------------
 
-Physical parameters are stored on the **system**, not in `IVP.args`.
+Physical parameters are stored on the **system**, not in ``IVP.args``.
 Define your potential as a normal Python function; no subclass is needed:
 
 .. code-block:: python
@@ -45,31 +45,31 @@ Define your potential as a normal Python function; no subclass is needed:
    energies = jax.vmap(system.energy)(solution.ys)
    forces = jax.vmap(system.force)(q)
 
-A parameter-free potential may instead have the signature `potential(q)`,
-with `params` omitted (or `None`). An empty dict is **not** equivalent to
-`None`: passing `params={}` uses `potential(q, params)`. All potentials
+A parameter-free potential may instead have the signature ``potential(q)``,
+with ``params`` omitted (or ``None``). An empty dict is **not** equivalent to
+``None``: passing ``params={}`` uses ``potential(q, params)``. All potentials
 must return a single real floating-point scalar, including for vector or
-matrix-shaped coordinates (use `jnp.sum` as appropriate). `params` may
+matrix-shaped coordinates (use ``jnp.sum`` as appropriate). ``params`` may
 contain JAX-compatible PyTree values. Avoid relying on hidden global
 parameters or mutable closures.
 
-For Newtonian dynamics the canonical momentum satisfies `p = m * dq/dt`;
-the force is `-jax.grad(V)(q)`. Public diagnostics include
-`system.force(q)`, `system.kinetic_energy(state)`,
-`system.potential_energy(state)` and `system.energy(state)`.
+For Newtonian dynamics the canonical momentum satisfies ``p = m * dq/dt``;
+the force is ``-jax.grad(V)(q)``. Public diagnostics include
+``system.force(q)``, ``system.kinetic_energy(state)``,
+``system.potential_energy(state)`` and ``system.energy(state)``.
 All energies are scalar quantities. A mass must be explicitly supplied
 and must be finite and positive. Supported shapes are:
 
-* Scalar `q`: scalar mass.
-* Vector `q` of shape `(D,)`: scalar or `(D,)` mass.
-* Matrix `q` of shape `(N, D)`: scalar, per-particle `(N,)`,
-  or per-coordinate `(N, D)` mass.
+* Scalar ``q``: scalar mass.
+* Vector ``q`` of shape ``(D,)``: scalar or ``(D,)`` mass.
+* Matrix ``q`` of shape ``(N, D)``: scalar, per-particle ``(N,)``,
+  or per-coordinate ``(N, D)`` mass.
 
-A `(N,)` mass is **always** interpreted as a per-particle mass and is
-broadcast over coordinate components, even when `N == D`.
-Other shapes are rejected. `PhaseSpaceState(q, p)` requires matching
+A ``(N,)`` mass is **always** interpreted as a per-particle mass and is
+broadcast over coordinate components, even when ``N == D``.
+Other shapes are rejected. ``PhaseSpaceState(q, p)`` requires matching
 floating-point array shapes and dtypes, supports scalars/vectors/matrices,
-and is a JAX PyTree. For independent ensembles, use `jax.vmap` rather than
+and is a JAX PyTree. For independent ensembles, use ``jax.vmap`` rather than
 assuming the leading axis is a batch of independent systems.
 
 Parameter sensitivities
@@ -99,8 +99,8 @@ function. Supported differentiation depends on solver and adjoint settings.
 General Hamiltonians
 --------------------
 
-For an autonomous real scalar Hamiltonian, `HamiltonianSystem` evaluates
-`dq/dt = dH/dp` and `dp/dt = -dH/dq`, including mixed `q,p` terms.
+For an autonomous real scalar Hamiltonian, ``HamiltonianSystem`` evaluates
+``dq/dt = dH/dp`` and ``dp/dt = -dH/dq``, including mixed ``q,p`` terms.
 
 .. code-block:: python
 
@@ -117,20 +117,20 @@ For an autonomous real scalar Hamiltonian, `HamiltonianSystem` evaluates
    field = system.vector_field(0.0, state)
    energy = system.energy(state)
 
-Without `params`, the Hamiltonian signature is `H(q, p)`. Since a
+Without ``params``, the Hamiltonian signature is ``H(q, p)``. Since a
 general Hamiltonian need not be separable, it deliberately does not
 promise a Newtonian force or unique kinetic/potential-energy split.
 
 Current limitations
 -------------------
 
-These models are **autonomous**: they accept time in `vector_field` to
-follow the standard interface, but reject non-`None` `IVP.args`.
+These models are **autonomous**: they accept time in ``vector_field`` to
+follow the standard interface, but reject non-``None`` ``IVP.args``.
 Explicit time dependence, external forces, non-diagonal Newtonian masses,
 coordinate-domain termination and constraints are outside this feature.
 
 Models do not impose coordinate-domain restrictions. For instance,
-`V(q) = 1/q + q**3` is only mathematically valid for positive `q`;
+``V(q) = 1/q + q**3`` is only mathematically valid for positive ``q``;
 use appropriate initial conditions and inspect solver results. No clipping
 or automatic regularisation is performed. Positivity checks on concrete
 masses do not establish dynamic constraints on JAX-traced values.
