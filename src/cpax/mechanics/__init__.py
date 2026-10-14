@@ -4,4 +4,4 @@ from ._hamiltonian import HamiltonianSystem
 from ._newtonian import NewtonianSystem
 from ._state import PhaseSpaceState
 
-__all__ = ["PhaseSpaceState", "NewtonianSystem", "HamiltonianSystem"]
+__all__ = ["HamiltonianSystem", "NewtonianSystem", "PhaseSpaceState"]
