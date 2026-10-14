@@ -90,7 +90,7 @@ class IVP(eqx.Module):
             raise ValueError(
                 "Could not evaluate the system's vector field with the "
                 "provided initial state y0 and args. Check their compatibility "
-                "and ensure the vector field supports JAX tracing."
+                "and ensure the vector field supports JAX tracing. "
                 f"Original error: {exc}"
             ) from exc
 
