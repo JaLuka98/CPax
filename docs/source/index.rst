@@ -11,7 +11,8 @@ workflow currently supports continuous-time IVPs. PDEs,
 boundary-value problems, or Monte Carlo algorithms are not yet supported.
 
 Start with :doc:`dynamics` to define a system, then :doc:`problems`
-and :doc:`solvers` for a complete simulation. See :doc:`results`
+and :doc:`solvers` for a complete simulation.
+For physical systems based on potentials or Hamiltonians, see :doc:`mechanics`. See :doc:`results`
 for trajectory shapes, numerical diagnostics, and failure handling.
 
 .. toctree::
@@ -19,6 +20,7 @@ for trajectory shapes, numerical diagnostics, and failure handling.
    :caption: Guides
 
    dynamics
+   mechanics
    problems
    solvers
    results
