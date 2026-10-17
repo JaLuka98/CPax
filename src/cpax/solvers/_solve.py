@@ -1,6 +1,7 @@
 """Public IVP numerical integration API."""
 
 from numbers import Integral
+from typing import Literal
 
 import diffrax
 import jax
@@ -11,6 +12,7 @@ from cpax._backends._diffrax import solve_diffrax
 from cpax.problems import IVP
 from cpax.results import Solution
 
+from ._auto import Auto
 from ._saveat import SaveAt
 
 
@@ -26,10 +28,25 @@ def _positive_real(name: str, value: float | jax.Array) -> None:
         raise ValueError(f"{name} must be a positive finite real scalar.")
 
 
+def _resolve_solver(
+    solver: diffrax.AbstractSolver | Auto | Literal["auto"],
+) -> tuple[diffrax.AbstractSolver, Literal["auto", "explicit"]]:
+    """Select a conservative IVP default without inferring physical properties."""
+    if isinstance(solver, str):
+        if solver != "auto":
+            raise ValueError("Unknown solver name; use 'auto' or a native Diffrax solver.")
+        return diffrax.Tsit5(), "auto"
+    if isinstance(solver, Auto):
+        return diffrax.Tsit5(), "auto"
+    if isinstance(solver, diffrax.AbstractSolver):
+        return solver, "explicit"
+    raise TypeError("solver must be 'auto', cpax.solvers.Auto(), or a native diffrax.AbstractSolver.")
+
+
 def solve(
     problem: IVP,
     *,
-    solver: diffrax.AbstractSolver,
+    solver: diffrax.AbstractSolver | Auto | Literal["auto"] = "auto",
     saveat: SaveAt | None = None,
     dt0: float | jax.Array | None = None,
     rtol: float | jax.Array | None = None,
@@ -38,7 +55,10 @@ def solve(
     max_steps: int = 4096,
     throw: bool = True,
 ) -> Solution:
-    """Integrate a continuous-time IVP using a native Diffrax solver.
+    """Integrate an IVP with an explicit Diffrax solver or the ``'auto'`` default.
+
+    Automatic selection currently uses Tsit5 for all supported IVPs. It
+    does not infer stiffness, geometric structure, or accuracy requirements.
 
     Without a custom controller, a Diffrax PID controller is constructed
     using relative tolerance 1e-5 and absolute tolerance 1e-7 by default.
@@ -51,8 +71,7 @@ def solve(
     """
     if not isinstance(problem, IVP):
         raise TypeError("solve currently supports only cpax.IVP problems.")
-    if not isinstance(solver, diffrax.AbstractSolver):
-        raise TypeError("solver must be a native diffrax.AbstractSolver.")
+    resolved_solver, solver_selection = _resolve_solver(solver)
     if saveat is not None and not isinstance(saveat, SaveAt):
         raise TypeError("saveat must be a cpax.SaveAt policy or None.")
     if not isinstance(max_steps, Integral) or isinstance(max_steps, bool) or max_steps < 1:
@@ -80,7 +99,8 @@ def solve(
 
     return solve_diffrax(
         problem,
-        solver=solver,
+        solver=resolved_solver,
+        solver_selection=solver_selection,
         saveat=SaveAt.final() if saveat is None else saveat,
         dt0=dt0,
         stepsize_controller=controller,
