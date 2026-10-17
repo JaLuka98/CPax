@@ -44,6 +44,7 @@ def solve_diffrax(
     problem: IVP,
     *,
     solver: diffrax.AbstractSolver,
+    solver_selection: str,
     saveat: Any,
     dt0: float | jax.Array | None,
     stepsize_controller: diffrax.AbstractStepSizeController,
@@ -93,6 +94,7 @@ def solve_diffrax(
         metadata={
             "backend": "diffrax",
             "solver": type(solver).__name__,
+            "solver_selection": solver_selection,
             "stepsize_controller": type(stepsize_controller).__name__,
             "backend_result": backend_solution.result,
         },
