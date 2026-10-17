@@ -293,3 +293,74 @@ def test_float64_decay_preserves_precision_and_matches_analytical_solution():
         assert bool(solution.is_success)
         expected = 2.0 * np.exp(-0.5 * np.asarray(solution.ts))
         np.testing.assert_allclose(solution.ys, expected, rtol=1e-9, atol=1e-10)
+
+
+def test_auto_solver_forms_match_explicit_tsit5():
+    problem = _decay_problem()
+    options = {"saveat": cpax.SaveAt.linspace(17), "rtol": 1e-6, "atol": 1e-8}
+    automatic = cpax.solve(problem, **options)
+    named = cpax.solve(problem, solver="auto", **options)
+    marker = cpax.solve(problem, solver=cpax.solvers.Auto(), **options)
+    explicit = cpax.solve(problem, solver=diffrax.Tsit5(), **options)
+
+    for result in (automatic, named, marker):
+        np.testing.assert_allclose(result.ts, explicit.ts, rtol=0, atol=0)
+        np.testing.assert_allclose(result.ys, explicit.ys, rtol=1e-6, atol=1e-7)
+        assert result.metadata["solver"] == "Tsit5"
+        assert result.metadata["solver_selection"] == "auto"
+        assert result.metadata["stepsize_controller"] == "PIDController"
+        assert result.metadata["max_steps"] == 4096
+        assert float(result.metadata["rtol"]) == pytest.approx(1e-6)
+        assert float(result.metadata["atol"]) == pytest.approx(1e-8)
+    assert explicit.metadata["solver_selection"] == "explicit"
+
+
+def test_auto_supports_non_autonomous_equations_and_mechanics():
+    def driven(t, y, args):
+        del args
+        return jnp.sin(t) - y
+
+    cases = [
+        cpax.IVP(VectorFieldSystem(driven), jnp.array(0.0), (0.0, 1.0)),
+        cpax.IVP(
+            cpax.mechanics.NewtonianSystem(potential=lambda q: 0.5 * q**2, mass=1.0),
+            cpax.mechanics.PhaseSpaceState(jnp.array(1.0), jnp.array(0.0)),
+            (0.0, 1.0),
+        ),
+        cpax.IVP(
+            cpax.mechanics.HamiltonianSystem(hamiltonian=lambda q, p: 0.5 * (q**2 + p**2)),
+            cpax.mechanics.PhaseSpaceState(jnp.array(1.0), jnp.array(0.0)),
+            (0.0, 1.0),
+        ),
+    ]
+    for problem in cases:
+        actual = cpax.solve(problem)
+        expected = cpax.solve(problem, solver=diffrax.Tsit5())
+        assert bool(actual.is_success)
+        for a, b in zip(jax.tree.leaves(actual.ys), jax.tree.leaves(expected.ys), strict=True):
+            np.testing.assert_allclose(a, b, rtol=1e-6, atol=1e-7)
+
+
+def test_auto_solver_invalid_names_and_controller_configuration():
+    with pytest.raises(ValueError, match="Unknown solver name"):
+        cpax.solve(_decay_problem(), solver="dopri8")
+    with pytest.raises(TypeError, match="solver must"):
+        cpax.solve(_decay_problem(), solver=object())
+    with pytest.raises(ValueError, match="dt0"):
+        cpax.solve(
+            _decay_problem(),
+            solver="auto",
+            stepsize_controller=diffrax.ConstantStepSize(),
+        )
+
+
+def test_auto_failure_keeps_actual_selection_and_status():
+    result = cpax.solve(
+        _decay_problem(t_span=(0.0, 10.0)),
+        max_steps=1,
+        dt0=0.001,
+        throw=False,
+    )
+    assert not bool(result.is_success)
+    assert result.metadata["solver"] == "Tsit5"
+    assert result.metadata["solver_selection"] == "auto"

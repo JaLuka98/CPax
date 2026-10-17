@@ -141,3 +141,18 @@ def test_vmap_preserves_each_problem_failure_status():
 
     statuses = jax.vmap(integrate)(jnp.array([0.1, 2.0]))
     np.testing.assert_array_equal(statuses, [0, 1])
+
+
+def test_auto_selection_supports_jit_vmap_and_grad():
+    system = VectorFieldSystem(_decay)
+
+    @jax.jit
+    def compiled(rate):
+        problem = cpax.IVP(system, jnp.array(2.0), (0.0, 1.0), {"rate": rate})
+        return cpax.solve(problem).ys[-1]
+
+    rate = jnp.array(0.5)
+    np.testing.assert_allclose(compiled(rate), 2 * np.exp(-0.5), rtol=1e-4)
+    values = jax.vmap(compiled)(jnp.array([0.2, 0.5, 0.7]))
+    np.testing.assert_allclose(values, 2 * np.exp(-np.array([0.2, 0.5, 0.7])), rtol=1e-4)
+    np.testing.assert_allclose(jax.grad(compiled)(rate), -2 * np.exp(-0.5), rtol=5e-4)
