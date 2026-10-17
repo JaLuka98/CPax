@@ -96,6 +96,14 @@ def solve_diffrax(
             "solver": type(solver).__name__,
             "solver_selection": solver_selection,
             "stepsize_controller": type(stepsize_controller).__name__,
+            "dt0": dt0,
+            "rtol": (
+                stepsize_controller.rtol if isinstance(stepsize_controller, diffrax.PIDController) else None
+            ),
+            "atol": (
+                stepsize_controller.atol if isinstance(stepsize_controller, diffrax.PIDController) else None
+            ),
+            "max_steps": max_steps,
             "backend_result": backend_solution.result,
         },
     )
