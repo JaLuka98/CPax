@@ -5,7 +5,7 @@ Solving initial-value problems
 solver and returns a CPax :doc:`results`. CPax keeps physical systems
 independent of Diffrax, with the backend integration handled internally.
 Only continuous-time ``IVP`` problems are supported at present;
-solver selection is explicit rather than automatic.
+automatic selection is available with a conservative Tsit5 default.
 
 First integration
 -----------------
@@ -16,7 +16,6 @@ solution is ``y(t) = y0 * exp(-rate * (t - t0))``:
 .. code-block:: python
 
    import cpax
-   import diffrax
    import jax.numpy as jnp
    from cpax.dynamics import VectorFieldSystem
 
@@ -33,7 +32,6 @@ solution is ``y(t) = y0 * exp(-rate * (t - t0))``:
 
    solution = cpax.solve(
        problem,
-       solver=diffrax.Tsit5(),
        rtol=1e-6,
        atol=1e-8,
        saveat=cpax.SaveAt.linspace(101),
@@ -43,7 +41,12 @@ solution is ``y(t) = y0 * exp(-rate * (t - t0))``:
    values = solution.ys
    successful = solution.is_success
 
-The ``solver`` argument is mandatory. ``saveat=None`` saves only
+The ``solver`` argument defaults to ``"auto"``, currently selecting
+``diffrax.Tsit5()`` for every supported IVP. Equivalent explicit requests
+are ``solver="auto"`` and ``solver=cpax.solvers.Auto()``. For a specific
+method, pass a native Diffrax solver such as ``diffrax.Dopri8()``.
+This default is primarily suitable for non-stiff problems and does not
+infer stiffness, autonomy, or geometric structure. ``saveat=None`` saves only
 the final state, so use an explicit save policy when you want a
 trajectory. Model state leaves may be arrays or a PyTree of arrays;
 the saved trajectory preserves the PyTree structure with a leading
@@ -61,8 +64,8 @@ The public ``cpax.solve(problem, *, ...)`` keyword arguments are:
    * - Argument
      - Behaviour
    * - ``solver``
-     - Required native ``diffrax.AbstractSolver`` (for example,
-       ``diffrax.Tsit5()``).
+     - Default ``"auto"`` (currently Tsit5), ``cpax.solvers.Auto()``,
+       or an explicit native ``diffrax.AbstractSolver``.
    * - ``saveat``
      - A ``cpax.SaveAt`` sampling policy; ``None`` saves only the
        final state.
@@ -100,6 +103,11 @@ Diffrax provides several algorithms. Representative choices include:
   stiff problems.
 * ``diffrax.Euler()``: a simple first-order method, generally used with
   a fixed time step rather than adaptive PID control.
+
+Automatic selection does not diagnose stiffness and never retries with a
+different solver after failure. For long-time Hamiltonian integration, an
+explicit geometric method may be preferable where applicable; the current
+CPax IVP auto path does not select symplectic integrators.
 
 For fixed-step Euler integration, specify both the controller and step:
 
@@ -197,8 +205,11 @@ integrations instead:
 JAX-compatible Boolean scalar. ``stats`` contains backend statistics
 such as ``num_steps``, ``num_accepted_steps`` and
 ``num_rejected_steps`` where available. ``metadata`` includes
-the selected backend, solver and step-size-controller names and the
-original Diffrax ``RESULTS`` value in ``backend_result``.
+the selected backend, actual solver, selection mode (``auto`` or
+``explicit``), controller, initial step, available tolerances, and maximum
+steps, as well as the original Diffrax ``RESULTS`` value in
+``backend_result``. For a custom controller, unavailable tolerances are
+recorded as ``None`` rather than inferred.
 
 Failed solutions can contain padded, partial, or non-finite samples.
 A saved final-time entry does **not** prove that the solver reached

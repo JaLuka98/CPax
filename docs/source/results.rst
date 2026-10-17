@@ -8,7 +8,6 @@ returned by ``cpax.solve``:
 .. code-block:: python
 
    import cpax
-   import diffrax
    import jax.numpy as jnp
    from cpax.dynamics import VectorFieldSystem
 
@@ -24,7 +23,6 @@ returned by ``cpax.solve``:
    )
    solution = cpax.solve(
        problem,
-       solver=diffrax.Tsit5(),
        saveat=cpax.SaveAt.linspace(21),
    )
 
@@ -63,8 +61,12 @@ The ``status`` is an integer scalar corresponding to
 including ``num_steps``, ``num_accepted_steps``, and
 ``num_rejected_steps``. ``metadata`` describes the actual
 backend and algorithm. For the current Diffrax adapter, it contains
-``backend``, ``solver``, ``stepsize_controller``, and
-``backend_result``. The last entry is the original Diffrax
+``backend``, ``solver``, ``solver_selection``, ``stepsize_controller``,
+``dt0``, ``rtol``, ``atol``, ``max_steps``, and ``backend_result``.
+The ``solver_selection`` entry distinguishes automatic from explicit
+selection, while ``solver`` always names the algorithm actually used.
+For custom step-size controllers without discoverable tolerances, the
+tolerance entries are ``None``. The last entry is the original Diffrax
 ``RESULTS`` value, not a plain numeric array.
 
 .. code-block:: python
