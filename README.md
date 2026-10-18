@@ -17,7 +17,6 @@ inspect the resulting trajectory. For a unit-mass harmonic oscillator,
 
 ```python
 import cpax
-import diffrax
 import jax.numpy as jnp
 
 from cpax.dynamics import VectorFieldSystem
@@ -40,7 +39,6 @@ problem = cpax.IVP(
 
 solution = cpax.solve(
     problem,
-    solver=diffrax.Tsit5(),
     saveat=cpax.SaveAt.linspace(1000),
 )
 
@@ -56,8 +54,12 @@ Use `solution.ts`, `q`, and `p` for time series or a phase-space plot.
 The four layers are **System → Problem → Solver → Solution**. A system
 describes equations of motion; an `IVP` supplies initial conditions and
 an interval; `cpax.solve` handles integration; `Solution` contains saved
-states, status, and diagnostics. A native Diffrax solver must currently
-be selected explicitly; automatic solver selection is not implemented yet.
+states, status, and diagnostics. The default ``solver="auto"`` currently chooses Diffrax's Tsit5 for all
+supported IVPs. This is a general-purpose non-stiff default, not a guarantee
+of suitability for stiff or long-time structure-preserving simulations.
+Use ``solver=diffrax.Tsit5()`` (or another native Diffrax solver) to select
+the numerical algorithm explicitly. Inspect ``solution.metadata["solver"]``
+and ``solution.metadata["solver_selection"]`` for the actual choice.
 
 ## Documentation
 
