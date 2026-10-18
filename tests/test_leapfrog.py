@@ -14,18 +14,13 @@ def harmonic_oscillator(q, p, t, spring_constant=1.0):
 
 
 def test_kick_drift_kick_step():
-    q, p = leapfrog_step(
-        harmonic_oscillator, jnp.array([[1.0]]), jnp.array([[0.0]]), 0.0, 0.1
-    )
+    q, p = leapfrog_step(harmonic_oscillator, jnp.array([[1.0]]), jnp.array([[0.0]]), 0.0, 0.1)
     np.testing.assert_allclose(q, [[0.995]], atol=1e-6)
     np.testing.assert_allclose(p, [[-0.09975]], atol=1e-6)
 
 
 def test_scan_timestamps_and_energy():
-    ts, qs, ps = simulate_leapfrog_scan(
-        jnp.array([[1.0]]), jnp.array([[0.0]]),
-        0.0, 0.01, 1000, harmonic_oscillator
-    )
+    ts, qs, ps = simulate_leapfrog_scan(jnp.array([[1.0]]), jnp.array([[0.0]]), 0.0, 0.01, 1000, harmonic_oscillator)
     assert ts.shape == (1000,)
     assert qs.shape == (1000, 1, 1)
     np.testing.assert_allclose(ts[0], 0.01, atol=1e-6)

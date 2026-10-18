@@ -14,8 +14,7 @@ def main() -> None:
     angular_speed = 2.0 * jnp.pi * jnp.sqrt(total_mass / separation**3)
     q0 = jnp.array([[-masses[1] / total_mass, 0.0], [masses[0] / total_mass, 0.0]])
     velocities0 = jnp.array(
-        [[0.0, -angular_speed * masses[1] / total_mass],
-         [0.0, angular_speed * masses[0] / total_mass]]
+        [[0.0, -angular_speed * masses[1] / total_mass], [0.0, angular_speed * masses[0] / total_mass]]
     )
     p0 = masses[:, None] * velocities0
     potential = gravitational_potential(masses)
@@ -30,6 +29,7 @@ def main() -> None:
     _, qs, ps = simulate_leapfrog_scan(q0, p0, 0.0, 0.002, 1000, dynamics)
     def kinetic(p):
         return 0.5 * jnp.sum(p**2 / masses[:, None])
+
     first_energy = potential(q0) + kinetic(p0)
     last_energy = potential(qs[-1]) + kinetic(ps[-1])
     print(f"Relative energy drift: {(last_energy - first_energy) / first_energy:.3e}")

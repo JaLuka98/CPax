@@ -26,17 +26,11 @@ def simulate():
     gravitational_constant = 4.0 * jnp.pi**2
     positions = jnp.array([[0.0, 0.0], [1.0, 0.0], [1.5, 0.0], [5.0, 0.0]])
     velocities = jnp.array(
-        [[0.0, 0.0], [0.0, 2 * jnp.pi], [0.0, 1.6 * jnp.pi],
-         [0.0, 0.7 * jnp.sqrt(gravitational_constant / 5.0)]]
+        [[0.0, 0.0], [0.0, 2 * jnp.pi], [0.0, 1.6 * jnp.pi], [0.0, 0.7 * jnp.sqrt(gravitational_constant / 5.0)]]
     )
     system = NewtonianSystem(potential=gravitational_potential(masses), mass=masses)
-    problem = cpax.IVP(
-        system, PhaseSpaceState(q=positions, p=masses[:, None] * velocities), (0.0, 5.0)
-    )
-    solution = cpax.solve(
-        problem, saveat=cpax.SaveAt.linspace(751), rtol=1e-8, atol=1e-10,
-        max_steps=100000
-    )
+    problem = cpax.IVP(system, PhaseSpaceState(q=positions, p=masses[:, None] * velocities), (0.0, 5.0))
+    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(751), rtol=1e-8, atol=1e-10, max_steps=100000)
     if not bool(solution.is_success):
         raise RuntimeError("Planetary simulation failed.")
     return system, solution
@@ -54,14 +48,13 @@ def animate(solution, output: str | Path = "nbody_simulation.gif", *, fps: int =
     """Render the computed trajectory to a GIF; never called by Sphinx."""
     positions = np.asarray(solution.ys.q)
     fig, ax = plt.subplots(figsize=(6, 6))
-    ax.set(xlim=(-6, 6), ylim=(-6, 6), xlabel="x [AU]", ylabel="y [AU]",
-           title="Sun, Earth, Mars and comet")
+    ax.set(xlim=(-6, 6), ylim=(-6, 6), xlabel="x [AU]", ylabel="y [AU]", title="Sun, Earth, Mars and comet")
     ax.set_aspect("equal")
     points = []
     trails = []
     for label, color in zip(LABELS, COLORS, strict=True):
-        point, = ax.plot([], [], "o", color=color, label=label, markersize=6)
-        trail, = ax.plot([], [], "-", color=color, alpha=0.5, linewidth=1)
+        (point,) = ax.plot([], [], "o", color=color, label=label, markersize=6)
+        (trail,) = ax.plot([], [], "-", color=color, alpha=0.5, linewidth=1)
         points.append(point)
         trails.append(trail)
     ax.legend(loc="upper right")
@@ -82,8 +75,7 @@ def main() -> None:
     system, solution = simulate()
     energy, angular_momentum = diagnostics(system, solution)
     print("Max energy deviation:", float(np.max(np.abs(energy - energy[0]))))
-    print("Max angular-momentum deviation:",
-          float(np.max(np.abs(angular_momentum - angular_momentum[0]))))
+    print("Max angular-momentum deviation:", float(np.max(np.abs(angular_momentum - angular_momentum[0]))))
     animate(solution)
 
 

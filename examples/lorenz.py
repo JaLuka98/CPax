@@ -9,9 +9,7 @@ from cpax.dynamics import LorenzSystem
 
 def main() -> None:
     problem = cpax.IVP(LorenzSystem(), jnp.array([1.0, 1.0, 1.0]), (0.0, 35.0))
-    solution = cpax.solve(
-        problem, saveat=cpax.SaveAt.linspace(3501), rtol=1e-7, atol=1e-9, max_steps=20000
-    )
+    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(3501), rtol=1e-7, atol=1e-9, max_steps=20000)
     assert bool(solution.is_success)
     fig = plt.figure()
     ax = fig.add_subplot(projection="3d")
