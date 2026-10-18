@@ -113,6 +113,8 @@ For fixed-step Euler integration, specify both the controller and step:
 
 .. code-block:: python
 
+   import diffrax
+
    fixed = cpax.solve(
        problem,
        solver=diffrax.Euler(),
