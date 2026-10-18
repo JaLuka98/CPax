@@ -73,4 +73,4 @@ The complete executable code is in :doc:`examples/advanced`.
    :maxdepth: 2
    :caption: API reference
 
-   autoapi/index
+   autoapi/cpax/index

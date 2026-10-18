@@ -1,9 +1,9 @@
 """Lorenz attractor using the built-in CPax dynamical system."""
 
-import cpax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
+import cpax
 from cpax.dynamics import LorenzSystem
 
 

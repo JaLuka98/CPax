@@ -1,9 +1,9 @@
 """Harmonic oscillator: the minimal physics-first CPax workflow."""
 
-import cpax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
+import cpax
 from cpax.mechanics import NewtonianSystem, PhaseSpaceState
 
 

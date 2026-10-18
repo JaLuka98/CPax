@@ -21,7 +21,7 @@ integration. In the unsoftened model a collision between distinct particles
 is a physical singularity.
 
 Retained symplectic leapfrog
----------------------------
+----------------------------
 
 For separable Hamiltonians, the kick-drift-kick leapfrog integrator
 remains available as a specialised algorithm until it is integrated into

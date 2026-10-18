@@ -7,13 +7,13 @@ studies of long-time Hamiltonian structure.
 
 from pathlib import Path
 
-import cpax
 import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter
 
+import cpax
 from cpax.mechanics import NewtonianSystem, PhaseSpaceState, gravitational_potential
 
 LABELS = ("Sun", "Earth", "Mars", "Comet")

@@ -1,8 +1,8 @@
 """Conservative, unforced Duffing oscillator in a double-well potential."""
 
-import cpax
 import matplotlib.pyplot as plt
 
+import cpax
 from cpax.mechanics import NewtonianSystem, PhaseSpaceState
 
 

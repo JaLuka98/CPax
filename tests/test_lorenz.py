@@ -22,7 +22,7 @@ def test_rejects_invalid_states_and_args():
     system = LorenzSystem()
     with pytest.raises(ValueError, match="shape"):
         system.vector_field(0.0, jnp.ones(2))
-    with pytest.raises(ValueError, match="IVP.args"):
+    with pytest.raises(ValueError, match=r"IVP\.args"):
         system.vector_field(0.0, jnp.ones(3), {"rho": 2})
     with pytest.raises(TypeError, match="scalar"):
         LorenzSystem(sigma=jnp.ones(2))

@@ -28,7 +28,8 @@ def main() -> None:
         return p / masses[:, None], -force(q)
 
     _, qs, ps = simulate_leapfrog_scan(q0, p0, 0.0, 0.002, 1000, dynamics)
-    kinetic = lambda p: 0.5 * jnp.sum(p**2 / masses[:, None])
+    def kinetic(p):
+        return 0.5 * jnp.sum(p**2 / masses[:, None])
     first_energy = potential(q0) + kinetic(p0)
     last_energy = potential(qs[-1]) + kinetic(ps[-1])
     print(f"Relative energy drift: {(last_energy - first_energy) / first_energy:.3e}")
