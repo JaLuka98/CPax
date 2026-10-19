@@ -17,8 +17,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import cpax
 from cpax.mechanics import NewtonianSystem, PhaseSpaceState, gravitational_potential
 
-LABELS = ("Sun", "Earth", "Mars", "Jupiter", "Comet")
-COLORS = ("gold", "royalblue", "orangered", "burlywood", "slategray")
+jax.config.update("jax_enable_x64", True)
 
 
 def simulate():
@@ -35,8 +34,8 @@ def simulate():
     mars_orbit_radius = 1.524
     jupiter_orbit_radius = 5.204
     comet_semi_major_axis = 40.0
-    comet_perihelion = 2.0
-    comet_start_radius = 16.0
+    comet_perihelion = 1.5
+    comet_start_radius = 15
     comet_eccentricity = 1.0 - comet_perihelion / comet_semi_major_axis
     comet_specific_angular_momentum = jnp.sqrt(
         gravitational_constant * comet_semi_major_axis * (1.0 - comet_eccentricity**2)
@@ -87,6 +86,13 @@ def diagnostics(system, solution) -> tuple[np.ndarray, np.ndarray]:
 
 def animate(solution, output: str | Path = "nbody_simulation.gif", *, fps: int = 20) -> None:
     """Render the computed trajectory to a GIF; never called by Sphinx."""
+    body_styles = (
+        ("Sun", "gold"),
+        ("Earth", "royalblue"),
+        ("Mars", "orangered"),
+        ("Jupiter", "burlywood"),
+        ("Comet", "slategray"),
+    )
     positions = np.asarray(solution.ys.q)
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.set(
@@ -99,7 +105,7 @@ def animate(solution, output: str | Path = "nbody_simulation.gif", *, fps: int =
     ax.set_aspect("equal")
     points = []
     trails = []
-    for label, color in zip(LABELS, COLORS, strict=True):
+    for label, color in body_styles:
         (point,) = ax.plot([], [], "o", color=color, label=label, markersize=6)
         (trail,) = ax.plot([], [], "-", color=color, alpha=0.5, linewidth=1)
         points.append(point)
