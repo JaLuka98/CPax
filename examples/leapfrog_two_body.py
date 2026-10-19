@@ -27,6 +27,7 @@ def main() -> None:
         return p / masses[:, None], -force(q)
 
     _, qs, ps = simulate_leapfrog_scan(q0, p0, 0.0, 0.002, 1000, dynamics)
+
     def kinetic(p):
         return 0.5 * jnp.sum(p**2 / masses[:, None])
 
