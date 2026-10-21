@@ -41,6 +41,9 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Preserve artifact validator from the selected workflow revision
+        run: cp scripts/validate_pypi_dist.py "$RUNNER_TEMP/validate_pypi_dist.py"
+
       - name: Fetch current main and selected release tag
         if: ${{ github.ref == 'refs/heads/main' }}
         env:
@@ -105,41 +108,7 @@ jobs:
           set -euo pipefail
           uv lock --check
           uv build
-          python - <<'PY'
-          import os
-          import pathlib
-          import zipfile
-          import tarfile
-          import email
-          import re
-
-          version = os.environ["RELEASE_VERSION"]
-          artifacts = sorted(pathlib.Path("dist").iterdir())
-          wheels = [p for p in artifacts if p.suffix == ".whl"]
-          sdists = [p for p in artifacts if p.name.endswith(".tar.gz")]
-          assert len(wheels) == 1, f"Expected exactly one wheel, got {wheels}"
-          assert len(sdists) == 1, f"Expected exactly one sdist, got {sdists}"
-          wheel = wheels[0]
-          sdist = sdists[0]
-          assert wheel.name == f"cpax-{version}-py3-none-any.whl", wheel.name
-          assert sdist.name == f"cpax-{version}.tar.gz", sdist.name
-
-          with zipfile.ZipFile(wheel) as archive:
-              metadata_files = [n for n in archive.namelist() if n.endswith(".dist-info/METADATA")]
-              assert len(metadata_files) == 1
-              metadata = email.message_from_bytes(archive.read(metadata_files[0]))
-          assert metadata["Name"].lower() == "cpax"
-          assert metadata["Version"] == version
-
-          with tarfile.open(sdist, "r:gz") as archive:
-              metadata_files = [m for m in archive.getmembers() if m.name.endswith("/PKG-INFO")]
-              assert len(metadata_files) == 1
-              f = archive.extractfile(metadata_files[0])
-              assert f is not None
-              metadata = email.message_from_bytes(f.read())
-          assert metadata["Name"].lower() == "cpax"
-          assert metadata["Version"] == version
-          PY
+          python "$RUNNER_TEMP/validate_pypi_dist.py" "$RELEASE_VERSION" dist
 
       - name: Smoke-test installed wheel outside the checkout
         env:
