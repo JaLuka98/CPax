@@ -53,4 +53,4 @@ uv run sphinx-build -W -b html docs/source docs/_build/html
 
 Releases use calendar versions `YYYY.M.N`. The manual GitHub Actions
 release workflow supports non-publishing previews and publishing from
-`main`. See the workflow for its latest controls and validation.
+`main`. See the workflow for its latest controls and validation. Publishing to PyPI\nis a separate, manually approved process described in\n[the release guide](docs/publishing.md).
