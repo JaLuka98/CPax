@@ -20,9 +20,7 @@ class ReleaseValidationError(Exception):
 def git(*args: str, cwd: Path | None = None) -> str:
     result = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=False)
     if result.returncode:
-        raise ReleaseValidationError(
-            f"git {' '.join(args)} failed: {result.stderr.strip() or result.stdout.strip()}"
-        )
+        raise ReleaseValidationError(f"git {' '.join(args)} failed: {result.stderr.strip() or result.stdout.strip()}")
     return result.stdout.strip()
 
 
