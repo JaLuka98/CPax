@@ -106,6 +106,7 @@ units, solar masses and years; another value may be supplied explicitly.
 .. code-block:: python
 
    from cpax.mechanics import gravitational_potential
+   import jax.numpy as jnp
 
    masses = jnp.array([1.0, 3e-6])
    gravity = NewtonianSystem(

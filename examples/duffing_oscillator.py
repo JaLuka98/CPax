@@ -11,15 +11,21 @@ def potential(q):
     return -0.5 * q**2 + 0.25 * q**4
 
 
-def main() -> None:
+def simulate(q0: float, p0: float, *, t1: float = 30.0, samples: int = 1000):
+    """Integrate one trajectory in the conservative double-well potential."""
     system = NewtonianSystem(potential=potential, mass=1.0)
+    problem = cpax.IVP(system, PhaseSpaceState(q=q0, p=p0), (0.0, t1))
+    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(samples), rtol=1e-7, atol=1e-9)
+    return system, solution
+
+
+def main() -> None:
     fig, ax = plt.subplots()
     for q0, p0, label in [
         (-1.0, 0.2, "Oscillation in one well"),
         (-1.0, 0.9, "Motion across both wells"),
     ]:
-        problem = cpax.IVP(system, PhaseSpaceState(q=q0, p=p0), (0.0, 30.0))
-        sol = cpax.solve(problem, saveat=cpax.SaveAt.linspace(1000), rtol=1e-7, atol=1e-9)
+        _, sol = simulate(q0, p0)
         assert bool(sol.is_success)
         ax.plot(sol.ys.q, sol.ys.p, label=label)
     ax.set(xlabel="Position q", ylabel="Momentum p", title="Conservative Duffing oscillator")
