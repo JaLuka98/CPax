@@ -1,0 +1,178 @@
+name: Publish to PyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing annotated CalVer tag (e.g. v2026.10.0)"
+        type: string
+        required: true
+      dry_run:
+        description: "Validate and build without uploading to PyPI"
+        type: boolean
+        default: true
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpax-pypi-release
+  cancel-in-progress: false
+
+jobs:
+  validate-build:
+    # Publishing must be initiated from the trusted workflow on main.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      release_sha: ${{ steps.tag.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Fetch current main and selected release tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[1-9][0-9]{3}\.([1-9]|0?[1-9]|1[0-2])\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Invalid CalVer tag"
+            exit 1
+          fi
+          git fetch origin +refs/heads/main:refs/remotes/origin/main --no-tags
+          git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG" --no-tags
+
+      - name: Verify annotated tag and package metadata
+        id: tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          SHA="$(python scripts/validate_pypi_tag.py "$RELEASE_TAG")"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+          git checkout --detach "$SHA"
+          test "$(git rev-parse HEAD)" = "$SHA"
+          git diff --quiet
+          git diff --cached --quiet
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Build tagged source and verify artifacts
+        env:
+          RELEASE_VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          uv lock --check
+          uv build
+          python - <<'PY'
+          import os
+          import pathlib
+          import zipfile
+          import tarfile
+          import email
+          import re
+
+          version = os.environ["RELEASE_VERSION"]
+          artifacts = sorted(pathlib.Path("dist").iterdir())
+          assert len(artifacts) == 2, f"Expected exactly one wheel and one sdist, got {artifacts}"
+          wheel, = [p for p in artifacts if p.suffix == ".whl"]
+          sdist, = [p for p in artifacts if p.name.endswith(".tar.gz")]
+          assert wheel.name == f"cpax-{version}-py3-none-any.whl", wheel.name
+          assert sdist.name == f"cpax-{version}.tar.gz", sdist.name
+
+          with zipfile.ZipFile(wheel) as archive:
+              metadata_files = [n for n in archive.namelist() if n.endswith(".dist-info/METADATA")]
+              assert len(metadata_files) == 1
+              metadata = email.message_from_bytes(archive.read(metadata_files[0]))
+          assert metadata["Name"].lower() == "cpax"
+          assert metadata["Version"] == version
+
+          with tarfile.open(sdist, "r:gz") as archive:
+              metadata_files = [m for m in archive.getmembers() if m.name.endswith("/PKG-INFO")]
+              assert len(metadata_files) == 1
+              f = archive.extractfile(metadata_files[0])
+              assert f is not None
+              metadata = email.message_from_bytes(f.read())
+          assert metadata["Name"].lower() == "cpax"
+          assert metadata["Version"] == version
+          PY
+
+      - name: Smoke-test installed wheel outside the checkout
+        env:
+          RELEASE_VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          uv venv "$RUNNER_TEMP/cpax-pypi-smoke" --python 3.12
+          uv pip install --python "$RUNNER_TEMP/cpax-pypi-smoke/bin/python" dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/cpax-pypi-smoke/bin/python" - <<'PY'
+          import os
+          import jax.numpy as jnp
+          from importlib.metadata import version
+          import cpax
+          from cpax.mechanics import NewtonianSystem, PhaseSpaceState
+
+          expected = os.environ["RELEASE_VERSION"]
+          assert version("cpax") == expected == cpax.__version__
+          system = NewtonianSystem(potential=lambda q: q**2 / 2, mass=1.0)
+          ivp = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 1.0))
+          solution = cpax.solve(ivp, saveat=cpax.SaveAt.linspace(11))
+          assert bool(solution.is_success)
+          assert bool(jnp.allclose(solution.ys.q[-1], jnp.cos(1.0), atol=1e-3))
+          PY
+
+      - name: Upload verified distributions
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: cpax-pypi-dist
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Release validation summary
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_SHA: ${{ steps.tag.outputs.sha }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## CPax PyPI publication check"
+            echo "Tag: $RELEASE_TAG"
+            echo "Verified commit: $RELEASE_SHA"
+            echo "Dry run: $DRY_RUN"
+            echo "Tag validation, artifact metadata and installed-wheel simulation passed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    if: ${{ !inputs.dry_run }}
+    needs: validate-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: pypi
+      url: https://pypi.org/project/CPax/${{ needs.validate-build.outputs.version }}/
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download only the verified distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: cpax-pypi-dist
+          path: dist
+
+      - name: Publish via PyPI Trusted Publishing (OIDC)
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/
