@@ -36,7 +36,7 @@ point for many non-stiff IVPs but not necessarily for long-time Hamiltonian
 structure preservation.
 
 A planetary simulation example
------------------------------
+------------------------------
 
 It is straightforward to define a multi-body gravitational system and simulate
 its dynamics with CPax.
