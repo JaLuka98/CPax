@@ -20,6 +20,3 @@ Always check ``is_success`` before interpreting a trajectory. With
 ``throw=False``, unsuccessful solves may return partial, padded or
 nonfinite data. Solver metadata records the actual algorithm and whether
 selection was automatic or explicit.
-
-Energy and other physical diagnostics belong to the physical system,
-rather than being silently assumed by the numerical solution container.

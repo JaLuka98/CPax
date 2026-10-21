@@ -35,17 +35,17 @@ The default solver is currently Diffrax's Tsit5, appropriate as a starting
 point for many non-stiff IVPs but not necessarily for long-time Hamiltonian
 structure preservation.
 
-Planetary simulation showcase
+A planetary simulation example
 -----------------------------
 
-Simulate an interacting Sun, Earth, Mars, and comet using the same
-System → Problem → Solver → Solution workflow.
+It is straightforward to define a multi-body gravitational system and simulate
+its dynamics with CPax.
 
 .. image:: _static/nbody_simulation.gif
    :alt: Animated numerical trajectories of the Sun, Earth, Mars, and a comet
    :width: 520px
 
-The complete executable code is in :doc:`examples/advanced`.
+This example can be found in :doc:`examples/advanced`.
 
 .. toctree::
    :maxdepth: 2

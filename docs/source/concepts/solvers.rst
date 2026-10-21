@@ -30,7 +30,7 @@ integration time step. For fixed stepping supply an explicit solver,
 The existing kick-drift-kick leapfrog algorithm is preserved separately
 in ``cpax.ode.simulate_leapfrog_scan``. It is symplectic for appropriate
 separable Hamiltonians and is not yet exposed through ``cpax.solve``.
-Adaptive Runge–Kutta solvers do not generally preserve symplectic structure.
+Adaptive Runge-Kutta solvers do not generally preserve symplectic structure.
 
 Use tighter tolerances and 64-bit precision when justified by convergence
 studies; neither guarantees exact conservation.
