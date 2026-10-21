@@ -2,7 +2,7 @@ Advanced examples
 =================
 
 A comet in a planetary system
-----------------------------
+-----------------------------
 
 This example shows a planetary system with earth, mars, jupiter and a comet.
 The comet is initialized with a high eccentricity orbit that crosses the orbits of the planets.

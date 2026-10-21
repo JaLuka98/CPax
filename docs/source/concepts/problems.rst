@@ -16,7 +16,7 @@ interval, independently of how the equations will be solved.
        t_span=(0.0, 10.0),
    )
 
-``PhaseSpaceState.p`` denotes canonical momentum, not velocity. The
+``PhaseSpaceState.p`` denotes the canonical momentum. The
 initial state can also be another array-valued JAX PyTree when using a
 compatible system. Only increasing forward time intervals are currently
 supported. Physical domain constraints are not enforced by ``IVP``.
