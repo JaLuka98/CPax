@@ -84,9 +84,12 @@ jobs:
 
           version = os.environ["RELEASE_VERSION"]
           artifacts = sorted(pathlib.Path("dist").iterdir())
-          assert len(artifacts) == 2, f"Expected exactly one wheel and one sdist, got {artifacts}"
-          wheel, = [p for p in artifacts if p.suffix == ".whl"]
-          sdist, = [p for p in artifacts if p.name.endswith(".tar.gz")]
+          wheels = [p for p in artifacts if p.suffix == ".whl"]
+          sdists = [p for p in artifacts if p.name.endswith(".tar.gz")]
+          assert len(wheels) == 1, f"Expected exactly one wheel, got {wheels}"
+          assert len(sdists) == 1, f"Expected exactly one sdist, got {sdists}"
+          wheel = wheels[0]
+          sdist = sdists[0]
           assert wheel.name == f"cpax-{version}-py3-none-any.whl", wheel.name
           assert sdist.name == f"cpax-{version}.tar.gz", sdist.name
 
@@ -136,7 +139,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: cpax-pypi-dist
-          path: dist/*
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
           if-no-files-found: error
           retention-days: 1
 
