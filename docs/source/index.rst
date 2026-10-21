@@ -38,11 +38,12 @@ structure preservation.
 A planetary simulation example
 ------------------------------
 
-It is straightforward to define a multi-body gravitational system and simulate
-its dynamics with CPax.
+This five-body example integrates the Sun, Earth, Mars, Jupiter and an
+inbound comet. The view focuses on the inner 10 AU; the comet starts
+outside the frame and moves inward.
 
 .. image:: _static/nbody_simulation.gif
-   :alt: Animated numerical trajectories of the Sun, Earth, Mars, and a comet
+   :alt: Animated numerical trajectories of the Sun, Earth, Mars, Jupiter and a comet
    :width: 520px
 
 This example can be found in :doc:`examples/advanced`.

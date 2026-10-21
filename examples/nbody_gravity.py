@@ -1,9 +1,12 @@
 """Sun, Earth, Mars, Jupiter and an inbound long-period comet.
 
-Units: AU, solar masses and years. The comet is a low-mass test particle on
-an orbit with a 20 AU semi-major axis and a 2 AU perihelion; it starts inbound
-at 8 AU, outside Jupiter's orbit. The adaptive default is not symplectic; use
-a geometric integrator for studies of long-time Hamiltonian structure.
+Units: AU, solar masses and years. The comet has negligible mass compared
+with the planets. Its initial position and velocity correspond to a
+Sun--comet Kepler orbit with semi-major axis 40 AU and perihelion 1.5 AU,
+starting inbound at 15 AU. Planetary gravity subsequently perturbs that
+orbit. The plot deliberately shows only the inner +/-10 AU; the comet
+enters the displayed region during the simulation. The adaptive solver is
+not symplectic; use a geometric integrator for long-term orbital studies.
 """
 
 from pathlib import Path
@@ -35,7 +38,7 @@ def simulate():
     jupiter_orbit_radius = 5.204
     comet_semi_major_axis = 40.0
     comet_perihelion = 1.5
-    comet_start_radius = 15
+    comet_start_radius = 15.0
     comet_eccentricity = 1.0 - comet_perihelion / comet_semi_major_axis
     comet_specific_angular_momentum = jnp.sqrt(
         gravitational_constant * comet_semi_major_axis * (1.0 - comet_eccentricity**2)

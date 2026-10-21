@@ -32,7 +32,7 @@ print(solution.ys.p)  # Canonical momentum
 The same workflow supports the conservative Duffing oscillator, the
 built-in `cpax.dynamics.LorenzSystem`, and multibody Newtonian gravity.
 See the [examples](examples/) and documentation for complete scripts,
-plots, and the animated Sun–Earth–Mars–comet showcase.
+plots, and the animated Sun–Earth–Mars–Jupiter–comet showcase.
 
 The default `solver="auto"` currently selects Diffrax Tsit5 for IVPs.
 It does not infer stiffness or symplectic structure. A standalone
