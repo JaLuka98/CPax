@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing annotated CalVer tag (e.g. v2026.10.0)"
+        description: "Existing annotated CalVer tag (required on main; ignored in branch dry runs)"
         type: string
-        required: true
+        required: false
       dry_run:
         description: "Validate and build without uploading to PyPI"
         type: boolean
@@ -22,14 +22,19 @@ concurrency:
 
 jobs:
   validate-build:
-    # Publishing must be initiated from the trusted workflow on main.
-    if: ${{ github.ref == 'refs/heads/main' }}
+    # Branch dry runs build candidate code. Real releases still require main.
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     outputs:
-      version: ${{ steps.tag.outputs.version }}
-      release_sha: ${{ steps.tag.outputs.sha }}
+      version: ${{ steps.tag.outputs.version || steps.candidate.outputs.version }}
+      release_sha: ${{ steps.tag.outputs.sha || steps.candidate.outputs.sha }}
     steps:
+      - name: Reject real publication outside main
+        if: ${{ !inputs.dry_run && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::Real PyPI publication must be dispatched from main."
+          exit 1
+
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -37,6 +42,7 @@ jobs:
           fetch-tags: true
 
       - name: Fetch current main and selected release tag
+        if: ${{ github.ref == 'refs/heads/main' }}
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
@@ -49,6 +55,7 @@ jobs:
           git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG" --no-tags
 
       - name: Verify annotated tag and package metadata
+        if: ${{ github.ref == 'refs/heads/main' }}
         id: tag
         env:
           RELEASE_TAG: ${{ inputs.tag }}
@@ -62,6 +69,30 @@ jobs:
           git diff --quiet
           git diff --cached --quiet
 
+      - name: Validate branch candidate (non-publishing dry run only)
+        if: ${{ github.ref != 'refs/heads/main' && inputs.dry_run }}
+        id: candidate
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import subprocess
+          import tomllib
+          from pathlib import Path
+
+          project = tomllib.loads(Path("pyproject.toml").read_text())["project"]
+          lock = tomllib.loads(Path("uv.lock").read_text())
+          version = project["version"]
+          assert project["name"].lower() == "cpax"
+          versions = [pkg["version"] for pkg in lock["package"] if pkg["name"].lower() == "cpax"]
+          assert versions == [version], "CPax version differs between pyproject.toml and uv.lock"
+          sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          with open(os.environ["GITHUB_OUTPUT"], "a") as outputs:
+              print(f"version={version}", file=outputs)
+              print(f"sha={sha}", file=outputs)
+          PY
+          echo "::notice::Testing the checked-out branch. No release tag is validated and no upload is possible."
+
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           python-version: "3.12"
@@ -69,7 +100,7 @@ jobs:
 
       - name: Build tagged source and verify artifacts
         env:
-          RELEASE_VERSION: ${{ steps.tag.outputs.version }}
+          RELEASE_VERSION: ${{ steps.tag.outputs.version || steps.candidate.outputs.version }}
         run: |
           set -euo pipefail
           uv lock --check
@@ -112,7 +143,7 @@ jobs:
 
       - name: Smoke-test installed wheel outside the checkout
         env:
-          RELEASE_VERSION: ${{ steps.tag.outputs.version }}
+          RELEASE_VERSION: ${{ steps.tag.outputs.version || steps.candidate.outputs.version }}
         run: |
           set -euo pipefail
           uv venv "$RUNNER_TEMP/cpax-pypi-smoke" --python 3.12
@@ -148,19 +179,21 @@ jobs:
       - name: Release validation summary
         env:
           RELEASE_TAG: ${{ inputs.tag }}
-          RELEASE_SHA: ${{ steps.tag.outputs.sha }}
+          RELEASE_SHA: ${{ steps.tag.outputs.sha || steps.candidate.outputs.sha }}
+          SOURCE_MODE: ${{ steps.candidate.outcome == 'success' && 'development branch (not release-tag validation)' || 'verified release tag' }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           {
             echo "## CPax PyPI publication check"
-            echo "Tag: $RELEASE_TAG"
-            echo "Verified commit: $RELEASE_SHA"
+            echo "Requested tag: $RELEASE_TAG"
+            echo "Source: $SOURCE_MODE"
+            echo "Tested commit: $RELEASE_SHA"
             echo "Dry run: $DRY_RUN"
             echo "Tag validation, artifact metadata and installed-wheel simulation passed."
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish:
-    if: ${{ !inputs.dry_run }}
+    if: ${{ !inputs.dry_run && github.ref == 'refs/heads/main' }}
     needs: validate-build
     runs-on: ubuntu-24.04
     timeout-minutes: 15
