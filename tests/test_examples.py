@@ -38,10 +38,10 @@ def test_duffing_example_both_energy_regimes():
 
 
 def test_short_gravitational_ivp_conserves_momentum():
-    masses = jnp.array([1.0, 0.001])
+    masses = jnp.array([1.0, 1.0])
     system = NewtonianSystem(potential=gravitational_potential(masses), mass=masses)
-    q0 = jnp.array([[0.0, 0.0], [1.0, 0.0]])
-    v0 = jnp.array([[0.0, 0.0], [0.0, 2.0 * jnp.pi]])
+    q0 = jnp.array([[-1.0, 0.0], [1.0, 0.0]])
+    v0 = jnp.array([[0.0, -0.5], [0.0, 0.5]])
     initial = PhaseSpaceState(q0, masses[:, None] * v0)
     result = cpax.solve(
         cpax.IVP(system, initial, (0.0, 0.2)),
@@ -52,9 +52,11 @@ def test_short_gravitational_ivp_conserves_momentum():
     assert bool(result.is_success)
     assert result.ys.q.shape == (21, 2, 2)
     total_momentum = jnp.sum(result.ys.p, axis=1)
-    np.testing.assert_allclose(total_momentum, total_momentum[0], rtol=1e-5, atol=1e-6)
+    np.testing.assert_allclose(
+        total_momentum, np.broadcast_to(total_momentum[0], total_momentum.shape), rtol=1e-7, atol=1e-8
+    )
     energy = jax.vmap(system.energy)(result.ys)
-    np.testing.assert_allclose(energy, energy[0], rtol=2e-3, atol=1e-5)
+    np.testing.assert_allclose(energy, energy[0], rtol=1e-3, atol=1e-5)
 
 
 def test_import_all_simple_examples():
