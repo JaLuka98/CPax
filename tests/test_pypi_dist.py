@@ -1,13 +1,17 @@
 """Regression tests for wheel and sdist metadata validation."""
 
 import io
+import runpy
 import tarfile
 import zipfile
 from pathlib import Path
 
 import pytest
 
-from scripts.validate_pypi_dist import ReleaseArtifactError, validate_artifacts
+ROOT = Path(__file__).resolve().parents[1]
+VALIDATOR = runpy.run_path(str(ROOT / "scripts" / "validate_pypi_dist.py"))
+ReleaseArtifactError = VALIDATOR["ReleaseArtifactError"]
+validate_artifacts = VALIDATOR["validate_artifacts"]
 
 
 def _metadata(version: str, *, name: str = "CPax") -> bytes:
