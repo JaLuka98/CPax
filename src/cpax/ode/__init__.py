@@ -1,6 +1,5 @@
-"""
-ODE module: Contains integrators and other ODE-related utilities.
-"""
+"""Low-level geometric integration retained alongside physics-first CPax."""
 
-# Re-export integration entry points.
-from .integrators import leapfrog_step, rk4_step, simulate_leapfrog_scan, simulate_rk4_scan
+from .integrators import leapfrog_step, simulate_leapfrog_scan
+
+__all__ = ["leapfrog_step", "simulate_leapfrog_scan"]

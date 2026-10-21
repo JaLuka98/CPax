@@ -1,53 +1,29 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Sphinx configuration for CPax."""
 
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-
-import os
-import sys
-
-try:
-    from cpax import __version__
-except (ImportError, AttributeError) as e:
-    raise RuntimeError(
-        "Failed to import `__version__` from the `cpax` package. Ensure that the `cpax` package is installed "
-        "and contains a `__version__` attribute."
-    ) from e
-sys.path.insert(0, os.path.abspath("../../src"))
+from importlib.metadata import version as distribution_version
 
 project = "CPax"
-copyright = "2025, Jan Lukas Späh"
 author = "Jan Lukas Späh"
-release = __version__
+copyright = "2026, Jan Lukas Späh"
+release = distribution_version("CPax")
 version = ".".join(release.split(".")[:2])
 
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
-
-# Extensions
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",  # For Google/NumPy-style docstrings
+    "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "autoapi.extension",  # let us test this
+    "autoapi.extension",
     "sphinx_autodoc_typehints",
-    "myst_parser",  # Optional for Markdown
+    "myst_parser",
 ]
 
 autoapi_type = "python"
-autoapi_dirs = ["../../src"]
-autoapi_ignore = ["*/__main__.py", "*/tests/*", "*/_backends/*"]
-
-templates_path = ["_templates"]
+autoapi_dirs = ["../../src/cpax"]
+autoapi_ignore = ["*/tests/*", "*/_backends/*"]
+autoapi_add_toctree_entry = False
+autoapi_options = ["members", "undoc-members", "show-inheritance", "show-module-summary"]
+templates_path = []
 exclude_patterns = []
-
-# Autoapi configuration: do not include private backends in the documentation
-suppress_warnings = ["autoapi.python_import_resolution"]
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
 html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]
+suppress_warnings = ["autoapi.python_import_resolution"]
