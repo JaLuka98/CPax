@@ -12,11 +12,6 @@ physical domains are planned,  but not yet implemented.
 - Examples: see the [examples](https://github.com/JaLuka98/CPax/tree/main/examples) directory in this repository
 - Issues: https://github.com/JaLuka98/CPax/issues
 
-**[Documentation](https://cpax.readthedocs.io/stable/)** ·
-**[PyPI](https://pypi.org/project/CPax/)** ·
-**[Source](https://github.com/JaLuka98/CPax)** ·
-**[Issues](https://github.com/JaLuka98/CPax/issues)** .
-
 ## Installation
 
 CPax is published on [PyPI](https://pypi.org/project/CPax/) and requires
@@ -51,7 +46,7 @@ print(solution.ys.p)  # Momentum
 
 The same workflow supports other systems.
 Consult the [examples](https://github.com/JaLuka98/CPax/tree/main/examples) and the documentation
-for further information code to get started.
+for further information and code to get started.
 
 ## Development and releases
 
