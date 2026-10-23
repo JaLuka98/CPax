@@ -4,7 +4,7 @@
 It separates physical **systems**, **problems**, **solvers** and
 **solutions** in reusable workflows. The current implementation supports
 continuous-time initial-value problems and classical mechanics; additional
-physical domains are planned,  but not yet implemented.
+physical domains are planned, but not yet implemented.
 
 - GitHub: https://github.com/JaLuka98/CPax
 - Documentation: https://cpax.readthedocs.io
@@ -23,15 +23,15 @@ pip install cpax
 pip install cpax==2026.10.0  # specific version
 ```
 
-Other PyPI-compatible installers work as well, including `uv` or `pixie`.
-See the [installation guide](https://cpax.readthedocs.io/stable/getting-started.html)
+Other PyPI-compatible installers work as well, including `uv` or `pixi`.
+See the [installation guide](https://cpax.readthedocs.io/latest/getting-started.html)
 for details.
 
 ## Quickstart
 
 CPax provides a simple interface for defining and solving initial-value problems (IVPs) in classical mechanics.
-For example, the classical one-dimensional haromonic oscillator can be defined and solved for an initial condition of `q=1.0, p=0.0` over a timespace of `[0,10]` as follows:
-
+For example, the classical one-dimensional harmonic oscillator can be defined and solved for an initial condition of `q=1.0, p=0.0` over a time interval of `[0,10]` as follows:
+    
 ```python
 import cpax
 from cpax.mechanics import NewtonianSystem, PhaseSpaceState
@@ -50,8 +50,4 @@ for further information and code to get started.
 
 ## Development and releases
 
-Contributions are welcome! See the [contributing guide](https://cpax.readthedocs.io/stable/development/contributing.html)
-
-CPax uses **uv**, **Ruff**, and **ty** for reproducible development.
-See the [development guide](https://cpax.readthedocs.io/stable/development/index.html)
-for setting up a checkout, running tests and linting, and building the docs.
+Contributions are welcome! See the [contributing guide](https://cpax.readthedocs.io/latest/development) for details on setting up a checkout, running tests and linting, and building the docs.

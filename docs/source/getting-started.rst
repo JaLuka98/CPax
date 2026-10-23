@@ -47,7 +47,7 @@ canonical coordinates:
    problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 10.0))
    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(101))
 
-   print(solution.ts) # Time steps
+   print(solution.ts) # Saved time
    print(solution.ys.q) # Positions
    print(solution.ys.p) # Momenta
 
