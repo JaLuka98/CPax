@@ -1,4 +1,4 @@
-name: Test ODE module
+name: Test CPax
 
 on:
   push:

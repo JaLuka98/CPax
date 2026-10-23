@@ -4,19 +4,34 @@
 It separates physical **systems**, **problems**, **solvers** and
 **solutions** in reusable workflows. The current implementation supports
 continuous-time initial-value problems and classical mechanics; additional
-physical domains are planned, not yet implemented.
+physical domains are planned, but not yet implemented.
 
-**[Documentation](https://cpax.readthedocs.io/en/latest/)** ·
-**[Source](https://github.com/JaLuka98/CPax)** ·
-**[Issues](https://github.com/JaLuka98/CPax/issues)**
+- GitHub: https://github.com/JaLuka98/CPax
+- Documentation: https://cpax.readthedocs.io
+- PyPI: https://pypi.org/project/CPax/
+- Examples: see the [examples](https://github.com/JaLuka98/CPax/tree/main/examples) directory in this repository
+- Issues: https://github.com/JaLuka98/CPax/issues
 
 ## Installation
 
-Clone the repository, then run `uv sync` to create a reproducible
-development environment. CPax currently requires Python 3.12 or newer.
+CPax is published on [PyPI](https://pypi.org/project/CPax/) and requires
+Python 3.12 or newer. The latest release or a specific version can be
+installed with `pip`:
+
+```shell
+pip install cpax
+pip install cpax==2026.10.0  # specific version
+```
+
+Other PyPI-compatible installers work as well, including `uv` or `pixi`.
+See the [installation guide](https://cpax.readthedocs.io/latest/getting-started.html)
+for details.
 
 ## Quickstart
 
+CPax provides a simple interface for defining and solving initial-value problems (IVPs) in classical mechanics.
+For example, the classical one-dimensional harmonic oscillator can be defined and solved for an initial condition of `q=1.0, p=0.0` over a time interval of `[0,10]` as follows:
+    
 ```python
 import cpax
 from cpax.mechanics import NewtonianSystem, PhaseSpaceState
@@ -26,31 +41,13 @@ problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 10.0))
 solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(500))
 
 print(solution.ys.q)  # Position
-print(solution.ys.p)  # Canonical momentum
+print(solution.ys.p)  # Momentum
 ```
 
-The same workflow supports the conservative Duffing oscillator, the
-built-in `cpax.dynamics.LorenzSystem`, and multibody Newtonian gravity.
-See the [examples](examples/) and documentation for complete scripts,
-plots, and the animated Sun–Earth–Mars–Jupiter–comet showcase.
+The same workflow supports other systems.
+Consult the [examples](https://github.com/JaLuka98/CPax/tree/main/examples) and the documentation
+for further information and code to get started.
 
-The default `solver="auto"` currently selects Diffrax Tsit5 for IVPs.
-It does not infer stiffness or symplectic structure. A standalone
-symplectic leapfrog integrator is preserved in `cpax.ode`.
+## Development and releases
 
-## Development
-
-CPax uses **uv**, **Ruff**, and **ty**:
-
-```shell
-uv sync
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run ty check
-uv run sphinx-build -W -b html docs/source docs/_build/html
-```
-
-Releases use calendar versions `YYYY.M.N`. The manual GitHub Actions
-release workflow supports non-publishing previews and publishing from
-`main`. See the workflow for its latest controls and validation. Publishing to PyPI\nis a separate, manually approved process described in\n[the release guide](docs/publishing.md).
+Contributions are welcome! See the [contributing guide](https://cpax.readthedocs.io/latest/development) for details on setting up a checkout, running tests and linting, and building the docs.
