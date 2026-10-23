@@ -1,5 +1,5 @@
-Classical mechanics
-===================
+Mechanics
+=========
 
 The ``cpax.mechanics`` package provides ``NewtonianSystem``,
 ``HamiltonianSystem``, canonical ``PhaseSpaceState``, and an

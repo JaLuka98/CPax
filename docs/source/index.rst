@@ -1,5 +1,5 @@
-CPax — computational physics with JAX
-=====================================
+CPax |version| documentation
+============================
 
 CPax is an open-source, JAX-based library for defining, simulating, and
 analysing physical systems. Its physics-first continuous-time workflow
@@ -20,40 +20,10 @@ This example can be found in :doc:`examples/advanced`.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting started
 
    getting-started
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Core concepts
-
-   concepts/systems
-   concepts/problems
-   concepts/solvers
-   concepts/solutions
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Physics domains
-
+   concepts/index
    physics/mechanics
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Examples
-
-   examples/simple
-   examples/advanced
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Development and releases
-
+   examples/index
    development/index
-
-.. toctree::
-   :maxdepth: 2
-   :caption: API reference
-
-   autoapi/cpax/index
+   API <autoapi/cpax/index>
