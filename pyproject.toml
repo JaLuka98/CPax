@@ -36,8 +36,8 @@ test = [
   "pytest",
 ]
 lint = [
-  "ruff==0.17.0",
-  "ty==0.0.86",
+  "ruff==0.17.1",
+  "ty==0.0.89",
 ]
 docs = [
   "sphinx>=5.0",
