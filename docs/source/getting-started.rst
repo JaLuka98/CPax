@@ -54,6 +54,6 @@ canonical coordinates:
 This simple example demonstrates the basic workflow for defining and solving an initial-value problem (IVP) in classical mechanics using CPax.
 CPax follows the physics-first approach: A system is defined by its properties, independent of a concrete problem or the numerical method used to solve it.
 The IVP is then defined by specifying the system, initial conditions, and the time span for the simulation.
-Finally, the problem is solved using the `cpax.solve` function, which returns a solution object containing the time steps and corresponding positions and momenta.
+Finally, the problem is solved using the `cpax.solve` function, which returns a solution object containing the corresponding positions and momenta at the specified time points. The solution can be further analysed or visualised as needed.
 Please refer to the further pages in the documentation for more details on the available systems, solvers, and options for customising your simulations.
 Examples can be found in the :doc:`Simple examples <examples/simple>` and :doc:`Advanced examples <examples/advanced>` pages.
