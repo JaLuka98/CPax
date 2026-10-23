@@ -7,13 +7,23 @@ continuous-time initial-value problems and classical mechanics; additional
 physical domains are planned, not yet implemented.
 
 **[Documentation](https://cpax.readthedocs.io/en/latest/)** ·
+**[PyPI](https://pypi.org/project/CPax/)** ·
 **[Source](https://github.com/JaLuka98/CPax)** ·
 **[Issues](https://github.com/JaLuka98/CPax/issues)**
 
 ## Installation
 
-Clone the repository, then run `uv sync` to create a reproducible
-development environment. CPax currently requires Python 3.12 or newer.
+CPax is published on [PyPI](https://pypi.org/project/CPax/) and requires
+Python 3.12 or newer. Install it in your chosen Python environment:
+
+```shell
+pip install cpax
+```
+
+Other PyPI-compatible installers work as well, including `uv pip install cpax`,
+`uv add cpax`, or `pixi add --pypi cpax` (in an existing Pixi workspace).
+See the [installation guide](https://cpax.readthedocs.io/en/latest/getting-started.html)
+for details.
 
 ## Quickstart
 
@@ -38,19 +48,13 @@ The default `solver="auto"` currently selects Diffrax Tsit5 for IVPs.
 It does not infer stiffness or symplectic structure. A standalone
 symplectic leapfrog integrator is preserved in `cpax.ode`.
 
-## Development
+## Development and releases
 
-CPax uses **uv**, **Ruff**, and **ty**:
+CPax uses **uv**, **Ruff**, and **ty** for reproducible development.
+See the [development guide](https://cpax.readthedocs.io/en/latest/development/index.html)
+for setting up a checkout, running tests and linting, and building the docs.
 
-```shell
-uv sync
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run ty check
-uv run sphinx-build -W -b html docs/source docs/_build/html
-```
-
-Releases use calendar versions `YYYY.M.N`. The manual GitHub Actions
-release workflow supports non-publishing previews and publishing from
-`main`. See the workflow for its latest controls and validation. Publishing to PyPI\nis a separate, manually approved process described in\n[the release guide](docs/publishing.md).
+Releases use calendar versions `YYYY.M.N` and are published to PyPI through
+a manually approved GitHub Actions workflow. The
+[versioning and release guide](https://cpax.readthedocs.io/en/latest/development/versioning.html)
+explains the policy and publication process.

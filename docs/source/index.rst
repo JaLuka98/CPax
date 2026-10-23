@@ -12,9 +12,15 @@ domains are long-term directions, not currently available capabilities.
 Installation
 ------------
 
-CPax is currently distributed from its source repository. Clone the
-`CPax GitHub repository <https://github.com/JaLuka98/CPax>`_ and install
-its development environment with ``uv sync``.
+CPax is distributed on `PyPI <https://pypi.org/project/CPax/>`_ and requires
+Python 3.12 or newer. Install it using your preferred Python package manager:
+
+.. code-block:: console
+
+   pip install cpax
+
+You may alternatively use uv or Pixi. See :doc:`getting-started` for
+virtual environment setup, installation options and a first simulation.
 
 Quickstart: harmonic oscillator
 -------------------------------
@@ -50,6 +56,12 @@ This example can be found in :doc:`examples/advanced`.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Getting started
+
+   getting-started
+
+.. toctree::
+   :maxdepth: 2
    :caption: Core concepts
 
    concepts/systems
@@ -69,6 +81,12 @@ This example can be found in :doc:`examples/advanced`.
 
    examples/simple
    examples/advanced
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Development and releases
+
+   development/index
 
 .. toctree::
    :maxdepth: 2
