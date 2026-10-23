@@ -41,7 +41,7 @@ lint = [
 ]
 docs = [
   "sphinx>=5.0",
-  "sphinx-rtd-theme",
+  "pydata-sphinx-theme",
   "sphinx-autodoc-typehints",
   "sphinx-autoapi",
   "myst-parser",
@@ -53,6 +53,7 @@ dev = [
 ]
 
 [project.urls]
+"Documentation" = "https://cpax.readthedocs.io/en/latest/"
 "Source" = "https://github.com/JaLuka98/CPax"
 "Tracker" = "https://github.com/JaLuka98/CPax/issues"
 

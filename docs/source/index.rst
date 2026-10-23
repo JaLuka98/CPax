@@ -1,5 +1,5 @@
-CPax — computational physics with JAX
-=====================================
+CPax |version| documentation
+============================
 
 CPax is an open-source, JAX-based library for defining, simulating, and
 analysing physical systems. Its physics-first continuous-time workflow
@@ -9,38 +9,8 @@ CPax currently supports initial-value problems for dynamical systems and
 conservative classical mechanics. Molecular dynamics, spin models and other
 domains are long-term directions, not currently available capabilities.
 
-Installation
-------------
-
-CPax is currently distributed from its source repository. Clone the
-`CPax GitHub repository <https://github.com/JaLuka98/CPax>`_ and install
-its development environment with ``uv sync``.
-
-Quickstart: harmonic oscillator
--------------------------------
-
-.. code-block:: python
-
-   import cpax
-   from cpax.mechanics import NewtonianSystem, PhaseSpaceState
-
-   system = NewtonianSystem(potential=lambda q: q**2 / 2, mass=1.0)
-   problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 10.0))
-   solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(500))
-
-   print(solution.ys.q)  # Position at sampled times
-   print(solution.ys.p)  # Canonical momentum
-
-The default solver is currently Diffrax's Tsit5, appropriate as a starting
-point for many non-stiff IVPs but not necessarily for long-time Hamiltonian
-structure preservation.
-
-A planetary simulation example
-------------------------------
-
-This five-body example integrates the Sun, Earth, Mars, Jupiter and an
-inbound comet. The view focuses on the inner 10 AU; the comet starts
-outside the frame and moves inward.
+As an example, the following animation shows a five-body simulation of the Sun, Earth, Mars, Jupiter and an inbound comet.
+The view focuses on the inner 10 AU; the comet starts outside the frame and moves inward.
 
 .. image:: _static/nbody_simulation.gif
    :alt: Animated numerical trajectories of the Sun, Earth, Mars, Jupiter and a comet
@@ -50,28 +20,10 @@ This example can be found in :doc:`examples/advanced`.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Core concepts
 
-   concepts/systems
-   concepts/problems
-   concepts/solvers
-   concepts/solutions
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Physics domains
-
+   getting-started
+   concepts/index
    physics/mechanics
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Examples
-
-   examples/simple
-   examples/advanced
-
-.. toctree::
-   :maxdepth: 2
-   :caption: API reference
-
-   autoapi/cpax/index
+   examples/index
+   development/index
+   API <autoapi/cpax/index>

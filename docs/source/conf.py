@@ -24,6 +24,12 @@ autoapi_add_toctree_entry = False
 autoapi_options = ["members", "undoc-members", "show-inheritance", "show-module-summary"]
 templates_path = []
 exclude_patterns = []
-html_theme = "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"
+html_theme_options = {
+    "github_url": "https://github.com/JaLuka98/CPax",
+    "show_nav_level": 2,
+    "navigation_depth": 3,
+}
+
 html_static_path = ["_static"]
 suppress_warnings = ["autoapi.python_import_resolution"]
