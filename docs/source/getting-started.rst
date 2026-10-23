@@ -13,19 +13,14 @@ wheels and platform requirements can differ.
 Installation
 ------------
 
-For an ordinary Python environment, install CPax with pip:
+For an ordinary Python environment, you can install CPax with pip:
 
 .. code-block:: console
 
-   python -m pip install cpax
+   pip install cpax
+   pip install cpax==2026.10.0  # specific version
 
-You can instead use another PyPI-compatible tool. For example:
-
-.. code-block:: console
-
-   uv pip install cpax
-
-Or, when managing a project with uv:
+You can also use other PyPI-compatible tools as you prefer. For example:
 
 .. code-block:: console
 
@@ -36,11 +31,6 @@ In an existing Pixi workspace, the equivalent is:
 .. code-block:: console
 
    pixi add --pypi cpax
-
-These are *alternatives*, not sequential installation steps. Use the
-environment manager that suits your project. ``uv sync`` in the CPax
-repository is a **contributor workflow**, not an installation requirement
-for library users.
 
 First simulation
 ----------------
@@ -57,7 +47,13 @@ canonical coordinates:
    problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 10.0))
    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(101))
 
-   print(solution.ts)
-   print(solution.ys.q)
+   print(solution.ts) # Time steps
+   print(solution.ys.q) # Positions
+   print(solution.ys.p) # Momenta
 
-To work on CPax itself, use the :doc:`development/index` instead.
+This simple example demonstrates the basic workflow for defining and solving an initial-value problem (IVP) in classical mechanics using CPax.
+CPax follows the physics-first approach: A system is defined by its properties, independent of a concrete problem or the numerical method used to solve it.
+The IVP is then defined by specifying the system, initial conditions, and the time span for the simulation.
+Finally, the problem is solved using the `cpax.solve` function, which returns a solution object containing the time steps and corresponding positions and momenta.
+Please refer to the further pages in the documentation for more details on the available systems, solvers, and options for customising your simulations.
+Examples can be found in the :doc:`Simple examples <examples/simple>` and :doc:`Advanced examples <examples/advanced>` pages.
