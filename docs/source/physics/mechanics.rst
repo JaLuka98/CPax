@@ -144,7 +144,7 @@ canonical momenta ``p``, velocities ``v = p / mass``, and the equations
 
 .. math::
 
-   \dot q = p/m, \qquad \dot p = -\nabla_q V(q) + F_{\\mathrm{applied}}(t,q,v).
+   \dot q = p/m, \qquad \dot p = -\nabla_q V(q) + F_{\mathrm{applied}}(t,q,v).
 
 The potential is optional, autonomous, and scalar-valued. When absent,
 it contributes zero energy and zero conservative force. Generalised
@@ -188,7 +188,7 @@ constant diagonal mass, exact trajectories satisfy
 
 .. math::
 
-   \frac{dE_{\\mathrm{mech}}}{dt} = \sum_i v_i F_{\\mathrm{applied},i}.
+   \frac{dE_{\mathrm{mech}}}{dt} = \sum_i v_i F_{\mathrm{applied},i}.
 
 Thus mechanical energy generally is *not* conserved. For viscous damping,
 the energy derivative is non-positive without external driving.
