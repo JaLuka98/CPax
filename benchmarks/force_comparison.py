@@ -121,9 +121,7 @@ def _integrate(case: ForceCase, *, steps: int, dt: float, trials: int, repetitio
     initial = PhaseSpaceState(case.q, jnp.zeros_like(case.q))
     systems = {
         "ad": NewtonianSystem(potential=case.potential, mass=case.mass),
-        "analytical": NewtonianSystem(
-            potential=case.potential, mass=case.mass, force_fn=case.analytical_force
-        ),
+        "analytical": NewtonianSystem(potential=case.potential, mass=case.mass, force_fn=case.analytical_force),
     }
     results: dict[str, Any] = {}
     finals: dict[str, Any] = {}
@@ -181,7 +179,9 @@ def _validate_parameter_gradients(case: ForceCase, *, steps: int, dt: float) -> 
                 return factor * case.analytical_force(q)
 
             system = NewtonianSystem(
-                potential=potential, mass=case.mass, params=scale,
+                potential=potential,
+                mass=case.mass,
+                params=scale,
                 force_fn=scaled_force if explicit else None,
             )
             final = _make_trajectory(system, jnp.zeros_like(case.q), steps=steps, dt=dt)(case.q)
@@ -202,7 +202,8 @@ def _validate_parameter_gradients(case: ForceCase, *, steps: int, dt: float) -> 
     h = jnp.asarray(1e-2 if case.q.dtype == jnp.float32 else 1e-4, dtype=case.q.dtype)
     finite_difference = (baseline(scale + h) - baseline(scale - h)) / (2 * h)
     np.testing.assert_allclose(
-        ad_grad, finite_difference,
+        ad_grad,
+        finite_difference,
         rtol=0.05 if case.q.dtype == jnp.float32 else 0.001,
         atol=1e-4 if case.q.dtype == jnp.float32 else 1e-7,
     )
@@ -226,19 +227,34 @@ def main() -> None:
     parser.add_argument("--precision", choices=["float32", "float64"], default="float32")
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--repetitions", type=int, default=25)
-    parser.add_argument("--integration-steps", type=int, default=0,
-                        help="0 skips full integrations and parameter-gradient validation")
-    parser.add_argument("--integration-sizes", nargs="+", type=int, default=[128, 256, 1024],
-                        help="Particle counts to integrate if included in --sizes")
+    parser.add_argument(
+        "--integration-steps", type=int, default=0, help="0 skips full integrations and parameter-gradient validation"
+    )
+    parser.add_argument(
+        "--integration-sizes",
+        nargs="+",
+        type=int,
+        default=[128, 256, 1024],
+        help="Particle counts to integrate if included in --sizes",
+    )
     parser.add_argument("--integration-dt", type=float, default=0.001)
-    parser.add_argument("--gradient-validation-size", type=int, default=8,
-                        help="Separate small gravity system for JAX parameter-gradient checks")
+    parser.add_argument(
+        "--gradient-validation-size",
+        type=int,
+        default=8,
+        help="Separate small gravity system for JAX parameter-gradient checks",
+    )
     parser.add_argument("--output", type=Path, help="Write machine-readable JSON results")
     args = parser.parse_args()
-    if (min(args.trials, args.repetitions) <= 0 or min(args.sizes) < 2
-            or min(args.integration_sizes) < 2 or args.integration_steps < 0
-            or args.gradient_validation_size < 2 or not np.isfinite(args.integration_dt)
-            or args.integration_dt <= 0):
+    if (
+        min(args.trials, args.repetitions) <= 0
+        or min(args.sizes) < 2
+        or min(args.integration_sizes) < 2
+        or args.integration_steps < 0
+        or args.gradient_validation_size < 2
+        or not np.isfinite(args.integration_dt)
+        or args.integration_dt <= 0
+    ):
         parser.error("Trials/repetitions must be positive; sizes >=2; integration steps >=0.")
     if args.precision == "float64":
         jax.config.update("jax_enable_x64", True)
@@ -254,8 +270,7 @@ def main() -> None:
         "devices": [str(device) for device in jax.devices()],
         "backend": jax.default_backend(),
         "speedup_definition": (
-            "analytical_speedup_factor_vs_ad = AD runtime / analytical runtime; "
-            ">1 favours analytical"
+            "analytical_speedup_factor_vs_ad = AD runtime / analytical runtime; >1 favours analytical"
         ),
         "note": "Times include dispatch and synchronisation; compiler memory is not peak RSS/device memory.",
         "cases": [],

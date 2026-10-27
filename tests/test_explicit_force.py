@@ -20,9 +20,7 @@ def test_analytical_matches_ad_force_and_field(case):
     state = PhaseSpaceState(case.q, jnp.zeros_like(case.q))
     np.testing.assert_allclose(direct.force(case.q), ad.force(case.q), rtol=5e-5, atol=5e-6)
     np.testing.assert_allclose(direct.force(case.q), ad_force(case)(case.q), rtol=5e-5, atol=5e-6)
-    np.testing.assert_allclose(
-        direct.vector_field(0.0, state).p, ad.vector_field(0.0, state).p, rtol=5e-5, atol=5e-6
-    )
+    np.testing.assert_allclose(direct.vector_field(0.0, state).p, ad.vector_field(0.0, state).p, rtol=5e-5, atol=5e-6)
     np.testing.assert_allclose(direct.energy(state), ad.energy(state))
 
 
@@ -38,8 +36,10 @@ def test_parameterised_callback_and_none_semantics():
     np.testing.assert_allclose(system.force(q), [-1.5, 1.2])
     with pytest.raises(TypeError):
         NewtonianSystem(
-            potential=lambda x: jnp.sum(x**2), mass=1.0,
-            params={}, force_fn=lambda x: -x,
+            potential=lambda x: jnp.sum(x**2),
+            mass=1.0,
+            params={},
+            force_fn=lambda x: -x,
         ).force(q)
 
 
@@ -47,7 +47,8 @@ def test_parameterised_callback_and_none_semantics():
 def test_force_shapes(shape):
     q = jnp.ones(shape)
     system = NewtonianSystem(
-        potential=lambda x: jnp.sum(x**2), mass=2.0,
+        potential=lambda x: jnp.sum(x**2),
+        mass=2.0,
         force_fn=lambda x: -2.0 * x,
     )
     assert system.force(q).shape == shape
@@ -77,7 +78,8 @@ def test_reject_dtype_mismatch():
     with jax.enable_x64(True):
         q = jnp.ones(2, dtype=jnp.float32)
         model = NewtonianSystem(
-            potential=lambda x: jnp.sum(x**2), mass=1.0,
+            potential=lambda x: jnp.sum(x**2),
+            mass=1.0,
             force_fn=lambda x: jnp.ones_like(x, dtype=jnp.float64),
         )
         with pytest.raises(TypeError, match="dtype"):
@@ -88,7 +90,8 @@ def test_jit_vmap_grad_and_equinox_callback():
     def evaluate(k):
         system = NewtonianSystem(
             potential=lambda q, p: 0.5 * p * jnp.sum(q**2),
-            mass=1.0, params=k,
+            mass=1.0,
+            params=k,
             force_fn=lambda q, p: -p * q,
         )
         return system.force(jnp.asarray([2.0, -1.0]))[0]
@@ -103,15 +106,14 @@ def test_jit_vmap_grad_and_equinox_callback():
         def __call__(self, q):
             return -self.k * q
 
-    system = NewtonianSystem(
-        potential=lambda q: 0.5 * jnp.sum(q**2), mass=1.0, force_fn=Force(jnp.asarray(3.0))
-    )
+    system = NewtonianSystem(potential=lambda q: 0.5 * jnp.sum(q**2), mass=1.0, force_fn=Force(jnp.asarray(3.0)))
     derivative = eqx.filter_grad(lambda s: jnp.sum(s.force(jnp.asarray([2.0, 3.0]))))(system)
     np.testing.assert_allclose(derivative.force_fn.k, -5.0)
 
 
 def test_verlet_and_tsit5_against_ad_and_oscillator_reference():
     k = jnp.asarray(2.0)
+
     def potential(q):
         return 0.5 * k * jnp.sum(q**2)
 
@@ -123,6 +125,7 @@ def test_verlet_and_tsit5_against_ad_and_oscillator_reference():
         (VelocityVerlet(), {"dt0": 0.02}),
         (diffrax.Tsit5(), {"rtol": 1e-5, "atol": 1e-7}),
     ]:
+
         def integrate(system, solver, settings):
             problem = cpax.IVP(system, initial, (0.0, 1.0))
             return cpax.solve(problem, solver=solver, **settings).ys.q[-1]
@@ -130,7 +133,8 @@ def test_verlet_and_tsit5_against_ad_and_oscillator_reference():
         np.testing.assert_allclose(
             integrate(ad_system, solver, settings),
             integrate(direct_system, solver, settings),
-            rtol=2e-5, atol=2e-5,
+            rtol=2e-5,
+            atol=2e-5,
         )
         np.testing.assert_allclose(integrate(direct_system, solver, settings), jnp.cos(jnp.sqrt(k)), atol=2e-4)
 
@@ -180,6 +184,4 @@ def test_benchmark_trajectory_and_parameter_gradient_checks():
             rtol=1e-9,
         )
         gradient = _validate_parameter_gradients(case, steps=4, dt=0.001)
-        np.testing.assert_allclose(
-            gradient["gradient_ad"], gradient["gradient_analytical"], rtol=1e-7, atol=1e-10
-        )
+        np.testing.assert_allclose(gradient["gradient_ad"], gradient["gradient_analytical"], rtol=1e-7, atol=1e-10)
