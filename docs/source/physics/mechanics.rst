@@ -131,9 +131,7 @@ An opt-in consistency-checking utility is tracked in
 Analytical forces can be faster for some interactions, particularly dense
 particle systems, but are **not necessarily faster** than automatic
 differentiation. Benchmark representative complete simulations in the
-required precision and on the intended hardware. See
-:doc:`../development/force-investigation` for benchmark methodology,
-measurements, and limitations.
+required precision and on the intended hardware.
 
 General Hamiltonians
 --------------------

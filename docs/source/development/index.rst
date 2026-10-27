@@ -53,4 +53,3 @@ The step-by-step, security-sensitive publication procedure is in
 
    versioning
    publishing
-   force-investigation

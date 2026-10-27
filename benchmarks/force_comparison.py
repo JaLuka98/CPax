@@ -1,10 +1,23 @@
 """Benchmark JAX AD and analytical conservative forces (CPax issue #72).
 
-Usage example (from repository root):
-    uv run force_comparison.py --sizes 8 32 128 256 1024 2056 --precision float64 --output results.json
+Usage example (from ``benchmarks/``):
 
-A speedup factor > 1 means the *analytical* force is faster than AD.
-Results are platform dependent. No timing thresholds are used in CI.
+    uv run force_comparison.py --sizes 8 32 128 256 1024 --precision float64
+
+The benchmark compares two implementations of the same conservative force:
+``-jax.grad(potential)`` and an analytical ``force_fn`` supplied to
+``NewtonianSystem``. The potential remains mandatory because CPax uses it for
+potential and total-energy diagnostics. An analytical callback must equal
+``-jax.grad(potential)`` over the physical domain; this script checks agreement
+at several configurations, but cannot prove global consistency.
+
+With ``--integration-steps``, the script additionally compares complete CPax
+Velocity Verlet integrations and validates a parameter-gradient path. The
+reported timings include dispatch and synchronisation, are platform dependent,
+and are not performance claims. Compiler allocation estimates are not peak
+process or device memory. A speedup factor greater than one means the
+analytical force is faster than automatic differentiation. ``--precision
+float64`` enables JAX 64-bit mode before benchmark arrays are created.
 """
 
 import argparse
@@ -223,10 +236,12 @@ def _validate_parameter_gradients(case: ForceCase, *, steps: int, dt: float) -> 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--sizes", nargs="+", type=int, default=[8, 32, 128])
-    parser.add_argument("--precision", choices=["float32", "float64"], default="float32")
-    parser.add_argument("--trials", type=int, default=3)
-    parser.add_argument("--repetitions", type=int, default=25)
+    parser.add_argument("--sizes", nargs="+", type=int, default=[8, 32, 128], help="Gravity particle counts")
+    parser.add_argument(
+        "--precision", choices=["float32", "float64"], default="float32", help="Floating-point precision"
+    )
+    parser.add_argument("--trials", type=int, default=3, help="Cold compilation trials per force")
+    parser.add_argument("--repetitions", type=int, default=25, help="Warm evaluations per trial")
     parser.add_argument(
         "--integration-steps", type=int, default=0, help="0 skips full integrations and parameter-gradient validation"
     )
