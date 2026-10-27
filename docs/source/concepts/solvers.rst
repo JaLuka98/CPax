@@ -106,7 +106,7 @@ Hamiltonians and a fixed step; and Velocity Verlet is now also available through
 Small energy drift over a short run is not proof of long-term reliability.
 
 Velocity Verlet for Newtonian mechanics
---------------------------------------
+---------------------------------------
 
 For autonomous conservative ``NewtonianSystem`` instances with canonical
 ``PhaseSpaceState(q, p)``, CPax provides a second-order symplectic
