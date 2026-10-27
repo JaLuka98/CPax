@@ -9,11 +9,13 @@ import numpy as np
 from jax.core import Tracer
 
 from cpax._backends._diffrax import solve_diffrax
+from cpax.mechanics import NewtonianSystem, PhaseSpaceState
 from cpax.problems import IVP
 from cpax.results import Solution
 
 from ._auto import Auto
 from ._saveat import SaveAt
+from ._velocity_verlet import VelocityVerlet
 
 
 def _positive_real(name: str, value: float | jax.Array) -> None:
@@ -60,6 +62,9 @@ def solve(
     Automatic selection currently uses Tsit5 for all supported IVPs. It
     does not infer stiffness, geometric structure, or accuracy requirements.
 
+    VelocityVerlet uses fixed steps. Provide dt0 and optionally
+    ConstantStepSize(); adaptive controllers and rtol/atol are incompatible.
+
     Without a custom controller, a Diffrax PID controller is constructed
     using relative tolerance 1e-5 and absolute tolerance 1e-7 by default.
     For fixed stepping, explicitly provide ``ConstantStepSize()`` and
@@ -82,7 +87,17 @@ def solve(
         if value is not None:
             _positive_real(name, value)
 
-    if stepsize_controller is not None:
+    if isinstance(resolved_solver, VelocityVerlet):
+        if not isinstance(problem.system, NewtonianSystem) or not isinstance(problem.y0, PhaseSpaceState):
+            raise TypeError("VelocityVerlet currently supports NewtonianSystem with PhaseSpaceState only.")
+        if dt0 is None:
+            raise ValueError("VelocityVerlet requires an explicit positive dt0 for fixed stepping.")
+        if rtol is not None or atol is not None:
+            raise ValueError("VelocityVerlet requires fixed stepping; rtol and atol are not supported.")
+        if stepsize_controller is not None and not isinstance(stepsize_controller, diffrax.ConstantStepSize):
+            raise ValueError("VelocityVerlet requires diffrax.ConstantStepSize(), not an adaptive controller.")
+        controller = diffrax.ConstantStepSize() if stepsize_controller is None else stepsize_controller
+    elif stepsize_controller is not None:
         if not isinstance(stepsize_controller, diffrax.AbstractStepSizeController):
             raise TypeError("stepsize_controller must be a Diffrax step-size controller.")
         if rtol is not None or atol is not None:
