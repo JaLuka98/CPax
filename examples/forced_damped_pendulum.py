@@ -26,7 +26,7 @@ def main() -> None:
         "g": 9.81,  # m/s^2
         "damping": 0.35,  # kg m^2/s
         "drive": 1.2,  # N m
-        "frequency": 2.0,  # rad/s
+        "frequency": 3.0,  # rad/s
     }
     inertia = params["mass"] * params["length"] ** 2
     model = ForcedNewtonianSystem(
@@ -37,7 +37,7 @@ def main() -> None:
     )
     # Angular momentum p = I * angular velocity (not angular velocity itself).
     y0 = PhaseSpaceState(q=0.5, p=0.0)
-    problem = cpax.IVP(model, y0, (0.0, 20.0))
+    problem = cpax.IVP(model, y0, (0.0, 50.0))
     solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(1001), rtol=1e-7, atol=1e-9)
     assert bool(solution.is_success)
 
