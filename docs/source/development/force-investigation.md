@@ -30,7 +30,7 @@ checks inside compiled dynamics. For arbitrary applied forces, use
 uv sync
 uv run pytest tests/test_explicit_force.py
 uv run python benchmarks/force_comparison.py --output force-f32.json
-JAX_ENABLE_X64=1 uv run python benchmarks/force_comparison.py --precision float64 --output force-f64.json
+uv run python benchmarks/force_comparison.py --precision float64 --output force-f64.json
 uv run python benchmarks/force_comparison.py --integration-steps 100 --output integrated.json
 ```
 

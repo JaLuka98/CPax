@@ -1,8 +1,7 @@
 """Reproducible JAX force comparison for CPax issue #72.
 
-From repository root:
-    uv run python benchmarks/force_comparison.py --output force-results.json
-    JAX_ENABLE_X64=1 uv run python benchmarks/force_comparison.py --precision float64
+Usage example (from repository root):
+    uv run force_comparison.py --sizes 8 32 128 256 1024 2056 --precision float64 --output results.json
 
 Results are platform dependent. No timing thresholds are used in CI.
 """
@@ -19,7 +18,6 @@ from typing import Any
 import jax
 import jax.numpy as jnp
 import numpy as np
-
 from force_models import ForceCase, ad_force, coupled_quartic, gravity, harmonic
 
 
@@ -80,7 +78,8 @@ def _compare(case: ForceCase, *, trials: int, repetitions: int) -> dict[str, Any
         "relative_force_l2_difference": relative,
         "ad": ad_result,
         "analytical": direct_result,
-        "evaluation_speedup_ad_over_analytical": ad_result["evaluation_us_median"] / direct_result["evaluation_us_median"],
+        "evaluation_speedup_ad_over_analytical": ad_result["evaluation_us_median"]
+        / direct_result["evaluation_us_median"],
     }
 
 
@@ -94,13 +93,15 @@ def _integrate(case: ForceCase, *, steps: int, dt: float, trials: int, repetitio
     results = {}
     outputs = {}
     for label, force_fn in (("ad", None), ("analytical", case.analytical_force)):
-        system = NewtonianSystem(potential=case.potential, mass=case.mass, force_fn=force_fn)
+        system = NewtonianSystem(
+            potential=case.potential,
+            mass=case.mass,
+            force_fn=force_fn,
+        )
 
-        def trajectory(q):
+        def trajectory(q, system=system):
             problem = cpax.IVP(system, PhaseSpaceState(q, state.p), (0.0, dt * steps))
-            return cpax.solve(
-                problem, solver=VelocityVerlet(), dt0=dt, max_steps=steps + 1
-            ).ys.q[-1]
+            return cpax.solve(problem, solver=VelocityVerlet(), dt0=dt, max_steps=steps + 1).ys.q[-1]
 
         outputs[label] = jax.jit(trajectory)(case.q)
         outputs[label].block_until_ready()
@@ -120,8 +121,8 @@ def main() -> None:
     args = parser.parse_args()
     if min(args.trials, args.repetitions) <= 0 or min(args.sizes) < 2 or args.integration_steps < 0:
         parser.error("Trials/repetitions must be positive; sizes >=2; integration steps >=0.")
-    if args.precision == "float64" and not jax.config.jax_enable_x64:
-        parser.error("Set JAX_ENABLE_X64=1 before invoking --precision float64.")
+    if args.precision == "float64":
+        jax.config.update("jax_enable_x64", True)
     dtype = jnp.float64 if args.precision == "float64" else jnp.float32
     cases = [harmonic(dtype=dtype), coupled_quartic(size=max(8, args.sizes[0]), dtype=dtype)]
     cases += [gravity(size=n, dtype=dtype) for n in args.sizes]
@@ -140,8 +141,11 @@ def main() -> None:
         result = _compare(case, trials=args.trials, repetitions=args.repetitions)
         if args.integration_steps and case.name == "gravity" and case.q.shape[0] <= 32:
             result["integration"] = _integrate(
-                case, steps=args.integration_steps, dt=0.001,
-                trials=args.trials, repetitions=max(3, args.repetitions // 5),
+                case,
+                steps=args.integration_steps,
+                dt=0.001,
+                trials=args.trials,
+                repetitions=max(3, args.repetitions // 5),
             )
         report["cases"].append(result)
         print(
