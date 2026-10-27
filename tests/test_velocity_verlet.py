@@ -141,9 +141,7 @@ def test_two_body_gravity_symplectic_integration():
     total_mass = jnp.sum(masses)
     omega = 2 * jnp.pi * jnp.sqrt(total_mass)
     q0 = jnp.array([[-masses[1] / total_mass, 0.0], [masses[0] / total_mass, 0.0]])
-    velocities = jnp.array(
-        [[0.0, -omega * masses[1] / total_mass], [0.0, omega * masses[0] / total_mass]]
-    )
+    velocities = jnp.array([[0.0, -omega * masses[1] / total_mass], [0.0, omega * masses[0] / total_mass]])
     p0 = masses[:, None] * velocities
     system = NewtonianSystem(potential=gravitational_potential(masses), mass=masses)
     problem = cpax.IVP(system, PhaseSpaceState(q0, p0), (0.0, 1.0))
