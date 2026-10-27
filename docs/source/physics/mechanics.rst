@@ -137,7 +137,7 @@ Hamiltonians, the retained fixed-step leapfrog integrator offers a
 symplectic alternative.
 
 Applied forces and driven mechanics
-----------------------------------
+-----------------------------------
 
 ``ForcedNewtonianSystem`` describes constant-diagonal-mass systems with
 canonical momenta ``p``, velocities ``v = p / mass``, and the equations
