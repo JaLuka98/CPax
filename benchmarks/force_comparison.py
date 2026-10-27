@@ -19,6 +19,7 @@ from typing import Any
 import jax
 import jax.numpy as jnp
 import numpy as np
+
 if __package__:
     from .force_models import ForceCase, ad_force, coupled_quartic, gravity, harmonic
 else:

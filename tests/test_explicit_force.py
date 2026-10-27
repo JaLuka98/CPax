@@ -112,7 +112,9 @@ def test_jit_vmap_grad_and_equinox_callback():
 
 def test_verlet_and_tsit5_against_ad_and_oscillator_reference():
     k = jnp.asarray(2.0)
-    potential = lambda q: 0.5 * k * jnp.sum(q**2)
+    def potential(q):
+        return 0.5 * k * jnp.sum(q**2)
+
     initial = PhaseSpaceState(1.0, 0.0)
     ad_system = NewtonianSystem(potential=potential, mass=1.0)
     direct_system = NewtonianSystem(potential=potential, mass=1.0, force_fn=lambda q: -k * q)
@@ -121,12 +123,16 @@ def test_verlet_and_tsit5_against_ad_and_oscillator_reference():
         (VelocityVerlet(), {"dt0": 0.02}),
         (diffrax.Tsit5(), {"rtol": 1e-5, "atol": 1e-7}),
     ]:
-        def integrate(system):
+        def integrate(system, solver, settings):
             problem = cpax.IVP(system, initial, (0.0, 1.0))
             return cpax.solve(problem, solver=solver, **settings).ys.q[-1]
 
-        np.testing.assert_allclose(integrate(ad_system), integrate(direct_system), rtol=2e-5, atol=2e-5)
-        np.testing.assert_allclose(integrate(direct_system), jnp.cos(jnp.sqrt(k)), atol=2e-4)
+        np.testing.assert_allclose(
+            integrate(ad_system, solver, settings),
+            integrate(direct_system, solver, settings),
+            rtol=2e-5, atol=2e-5,
+        )
+        np.testing.assert_allclose(integrate(direct_system, solver, settings), jnp.cos(jnp.sqrt(k)), atol=2e-4)
 
 
 def test_inconsistent_force_changes_reported_energy():
