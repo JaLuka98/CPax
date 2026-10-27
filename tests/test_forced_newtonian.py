@@ -18,7 +18,8 @@ def solve(system, y0=None, end=2.0, samples=61):
 
 
 def test_conservative_limit_matches_newtonian():
-    potential = lambda q: 0.5 * jnp.sum(q**2)
+    def potential(q):
+        return 0.5 * jnp.sum(q**2)
     classic = NewtonianSystem(mass=jnp.array([1.0, 2.0]), potential=potential)
     forced = ForcedNewtonianSystem(
         mass=jnp.array([1.0, 2.0]),
