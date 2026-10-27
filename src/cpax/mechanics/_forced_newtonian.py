@@ -60,10 +60,7 @@ class ForcedNewtonianSystem(DynamicalSystem):
     def _potential_value(self, q: jax.Array) -> jax.Array:
         if self.potential is None:
             return jnp.zeros((), dtype=q.dtype)
-        if self.params is None:
-            value = self.potential(q)
-        else:
-            value = self.potential(q, self.params)
+        value = self.potential(q) if self.params is None else self.potential(q, self.params)
         return _scalar_energy(value, "potential")
 
     def conservative_force(self, q: jax.Array) -> jax.Array:
