@@ -192,8 +192,8 @@ clip positions or regularise singular potentials. An exact autonomous
 Hamiltonian conserves energy, but adaptive Runge--Kutta integration
 generally does not conserve either energy or symplectic structure
 exactly. Inspect drift and convergence; for suitable separable
-Hamiltonians, the retained fixed-step leapfrog integrator offers a
-symplectic alternative.
+Hamiltonians, fixed-step ``VelocityVerlet`` through ``cpax.solve`` offers a
+symplectic alternative. See :doc:`../concepts/solvers` for its restrictions.
 
 Applied forces and driven mechanics
 -----------------------------------
