@@ -36,3 +36,14 @@ The resulting trajectories show the characteristic butterfly-shaped attractor.
 
 .. literalinclude:: ../../../examples/lorenz.py
    :language: python
+
+Driven and damped nonlinear pendulum
+------------------------------------
+
+The pendulum uses angular coordinate ``theta``, angular momentum
+``p = I * omega``, gravitational potential, viscous torque, and periodic
+external driving torque. In contrast to the conservative examples,
+its mechanical energy need not remain constant.
+
+.. literalinclude:: ../../../examples/forced_damped_pendulum.py
+   :language: python

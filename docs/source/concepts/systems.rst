@@ -38,8 +38,9 @@ it can exhibit chaotic behavior. The default parameters are
    system = LorenzSystem()  # sigma=10, rho=28, beta=8/3
    customised = LorenzSystem(sigma=12.0, rho=30.0)
 
-Mechanics provides ``NewtonianSystem`` and ``HamiltonianSystem`` based
-on physical potentials and Hamiltonians rather than hand-written ODEs.
+Mechanics provides ``NewtonianSystem``, ``HamiltonianSystem`` and
+``ForcedNewtonianSystem`` based on physical potentials, Hamiltonians and
+applied generalised forces rather than hand-written ODEs.
 
 The generic vector field receives run-specific parameters through
 ``IVP.args``. Physics-first mechanics and Lorenz models store their
