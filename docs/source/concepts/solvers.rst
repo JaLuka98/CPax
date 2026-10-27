@@ -102,8 +102,57 @@ when the physics predicts their conservation.
 For autonomous Hamiltonian models, adaptive Runge--Kutta schemes do not
 generally preserve the symplectic form. The retained kick-drift-kick
 ``cpax.ode.simulate_leapfrog_scan`` is symplectic for suitable separable
-Hamiltonians and a fixed step; it is not yet integrated with ``cpax.solve``.
+Hamiltonians and a fixed step; and Velocity Verlet is now also available through ``cpax.solve``.
 Small energy drift over a short run is not proof of long-term reliability.
+
+Velocity Verlet for Newtonian mechanics
+--------------------------------------
+
+For autonomous conservative ``NewtonianSystem`` instances with canonical
+``PhaseSpaceState(q, p)``, CPax provides a second-order symplectic
+Velocity Verlet (Störmer--Verlet) integrator through Diffrax's
+``AbstractSolver`` interface:
+
+.. code-block:: python
+
+   import cpax
+   from cpax.mechanics import NewtonianSystem, PhaseSpaceState
+   from cpax.solvers import VelocityVerlet
+
+   system = NewtonianSystem(potential=lambda q: 0.5 * q**2, mass=1.0)
+   problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 20.0))
+   result = cpax.solve(
+       problem,
+       solver=VelocityVerlet(),
+       dt0=0.01,
+       saveat=cpax.SaveAt.linspace(2001),
+       max_steps=3000,
+   )
+
+Velocity Verlet uses the kick--drift--kick splitting of
+``H(q, p) = p**2/(2*m) + V(q)``. It uses a constant step size;
+``cpax.solve`` selects ``diffrax.ConstantStepSize()`` automatically
+for this solver, but an explicit instance is also accepted.
+``dt0`` must be positive and provided explicitly. Adaptive controllers,
+``rtol``, and ``atol`` are not supported for this solver.
+``solver="auto"`` still selects the general-purpose ``Tsit5``,
+never Velocity Verlet by inference.
+
+The geometric guarantee requires a separable Hamiltonian and the
+corresponding canonical momentum (not velocity) in ``PhaseSpaceState``.
+A general ``HamiltonianSystem`` can describe nonseparable dynamics, so
+it is deliberately unsupported. Symplecticity does **not** imply exact
+energy conservation: for sufficiently small constant steps in regular
+bound motion, energy errors typically oscillate without secular drift.
+Always check convergence and invariants for the physical system at hand.
+
+The method saves through the standard CPax ``SaveAt`` API. Off-grid
+saved values use *linear interpolation*, which is **not symplectic**.
+For conservation-law studies, sample at actual integration-step endpoints
+(e.g. a grid aligned with ``dt0``). The solver caches the force at the
+end of each step to avoid a redundant force evaluation at the next step.
+The older ``cpax.ode.simulate_leapfrog_scan`` remains available for
+low-level use.
 
 Failures
 --------
