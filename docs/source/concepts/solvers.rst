@@ -100,10 +100,10 @@ tolerances, and monitor quantities such as energy or angular momentum
 when the physics predicts their conservation.
 
 For autonomous Hamiltonian models, adaptive Runge--Kutta schemes do not
-generally preserve the symplectic form. The retained kick-drift-kick
-``cpax.ode.simulate_leapfrog_scan`` is symplectic for suitable separable
-Hamiltonians and a fixed step; and Velocity Verlet is now also available through ``cpax.solve``.
-Small energy drift over a short run is not proof of long-term reliability.
+generally preserve the symplectic form. For supported autonomous, separable
+Newtonian models, ``VelocityVerlet`` provides fixed-step symplectic
+integration through ``cpax.solve``. Small energy drift over a short run is
+not proof of long-term reliability.
 
 Velocity Verlet for Newtonian mechanics
 ---------------------------------------
@@ -151,8 +151,6 @@ saved values use *linear interpolation*, which is **not symplectic**.
 For conservation-law studies, sample at actual integration-step endpoints
 (e.g. a grid aligned with ``dt0``). The solver caches the force at the
 end of each step to avoid a redundant force evaluation at the next step.
-The older ``cpax.ode.simulate_leapfrog_scan`` remains available for
-low-level use.
 
 Failures
 --------

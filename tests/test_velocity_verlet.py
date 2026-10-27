@@ -131,3 +131,33 @@ def test_bad_configuration_is_rejected():
             solver=VelocityVerlet(),
             dt0=0.1,
         )
+
+
+def test_two_body_gravity_symplectic_integration():
+    """A binary orbit preserves total momentum and bounded energy error."""
+    from cpax.mechanics import gravitational_potential
+
+    masses = jnp.array([1.0, 0.5])
+    total_mass = jnp.sum(masses)
+    omega = 2 * jnp.pi * jnp.sqrt(total_mass)
+    q0 = jnp.array([[-masses[1] / total_mass, 0.0], [masses[0] / total_mass, 0.0]])
+    velocities = jnp.array([[0.0, -omega * masses[1] / total_mass], [0.0, omega * masses[0] / total_mass]])
+    p0 = masses[:, None] * velocities
+    system = NewtonianSystem(potential=gravitational_potential(masses), mass=masses)
+    problem = cpax.IVP(system, PhaseSpaceState(q0, p0), (0.0, 1.0))
+    result = integrate(problem, 0.002, cpax.SaveAt.linspace(501))
+
+    assert bool(result.is_success)
+    assert result.ys.q.shape == (501, 2, 2)
+    np.testing.assert_allclose(result.ts[jnp.array([0, -1])], [0.0, 1.0], atol=1e-6)
+    np.testing.assert_allclose(result.ys.q[0], q0)
+    initial_total_momentum = jnp.sum(p0, axis=0)
+    total_momenta = jnp.sum(result.ys.p, axis=1)
+    np.testing.assert_allclose(
+        total_momenta,
+        jnp.broadcast_to(initial_total_momentum, total_momenta.shape),
+        atol=1e-4,
+        rtol=0,
+    )
+    energies = jax.vmap(system.energy)(result.ys)
+    assert float(jnp.max(jnp.abs((energies - energies[0]) / energies[0]))) < 1e-3

@@ -36,12 +36,14 @@ only for the isolated two-body problem.
 .. literalinclude:: ../../../examples/nbody_gravity.py
    :language: python
 
-Retained symplectic leapfrog
-----------------------------
+Symplectic two-body orbit with Velocity Verlet
+----------------------------------------------
 
-The following binary-orbit example uses the retained kick-drift-kick
-leapfrog integrator. With a fixed time step and a separable Hamiltonian,
-the method is symplectic. It is currently separate from ``cpax.solve``.
+This binary-orbit example uses ``NewtonianSystem`` and CPax's
+``VelocityVerlet`` solver with a fixed step. The canonical momenta and
+autonomous separable Hamiltonian meet the method's symplectic contract.
+The example samples at integration-step endpoints and checks energy drift;
+symplecticity does not imply exact energy conservation.
 
-.. literalinclude:: ../../../examples/leapfrog_two_body.py
+.. literalinclude:: ../../../examples/velocity_verlet_two_body.py
    :language: python
