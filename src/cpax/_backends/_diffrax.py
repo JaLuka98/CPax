@@ -10,7 +10,6 @@ from jax.core import Tracer
 
 from cpax.dynamics._systems import Time
 from cpax.mechanics import NewtonianSystem
-from cpax.solvers._velocity_verlet import VelocityVerlet
 from cpax.problems import IVP
 from cpax.results import Solution, SolutionStatus
 
@@ -63,6 +62,8 @@ def solve_diffrax(
     ) -> Any:
         """Adapt Diffrax's scalar-like time input to CPax's time interface."""
         return problem.system.vector_field(jnp.asarray(t), state, args)
+
+    from cpax.solvers._velocity_verlet import VelocityVerlet
 
     if isinstance(solver, VelocityVerlet):
         system = problem.system
