@@ -20,6 +20,7 @@ def solve(system, y0=None, end=2.0, samples=61):
 def test_conservative_limit_matches_newtonian():
     def potential(q):
         return 0.5 * jnp.sum(q**2)
+
     classic = NewtonianSystem(mass=jnp.array([1.0, 2.0]), potential=potential)
     forced = ForcedNewtonianSystem(
         mass=jnp.array([1.0, 2.0]),
@@ -65,8 +66,10 @@ def test_periodic_force_against_analytic_solution():
         applied_force=lambda t, q, v: amplitude * jnp.cos(omega * t) + jnp.zeros_like(q),
     )
     result = solve(system, PhaseSpaceState(0.0, 0.0), end=5.0)
-    exact = amplitude * (np.cos(omega * np.asarray(result.ts)) - np.cos(omega0 * np.asarray(result.ts))) / (
-        omega0**2 - omega**2
+    exact = (
+        amplitude
+        * (np.cos(omega * np.asarray(result.ts)) - np.cos(omega0 * np.asarray(result.ts)))
+        / (omega0**2 - omega**2)
     )
     np.testing.assert_allclose(result.ys.q, exact, atol=2e-4)
 
@@ -83,18 +86,19 @@ def test_nonlinear_pendulum_and_force_receives_velocity():
     state = PhaseSpaceState(0.5, inertia * 0.2)
     field = system.vector_field(0.0, state)
     np.testing.assert_allclose(field.q, 0.2)
-    np.testing.assert_allclose(
-        field.p, -params["mass"] * params["gravity"] * params["length"] * np.sin(0.5) - 0.06
-    )
+    np.testing.assert_allclose(field.p, -params["mass"] * params["gravity"] * params["length"] * np.sin(0.5) - 0.06)
     assert bool(solve(system, state, end=1.0).is_success)
 
 
-@pytest.mark.parametrize("shape,mass", [
-    ((), 2.0),
-    ((3,), jnp.array([1.0, 2.0, 3.0])),
-    ((2, 3), jnp.array([1.0, 2.0])),
-    ((2, 3), jnp.ones((2, 3))),
-])
+@pytest.mark.parametrize(
+    "shape,mass",
+    [
+        ((), 2.0),
+        ((3,), jnp.array([1.0, 2.0, 3.0])),
+        ((2, 3), jnp.array([1.0, 2.0])),
+        ((2, 3), jnp.ones((2, 3))),
+    ],
+)
 def test_shapes_and_optional_potential(shape, mass):
     system = ForcedNewtonianSystem(mass=mass, applied_force=lambda t, q, v: -v)
     state = PhaseSpaceState(jnp.ones(shape), jnp.ones(shape))
@@ -132,12 +136,13 @@ def test_invalid_callbacks_state_and_args():
     with pytest.raises(ValueError, match=r"IVP\.args"):
         system.vector_field(0.0, scalar, {"invalid": 1})
     with pytest.raises(ValueError, match="mass shape"):
-        ForcedNewtonianSystem(
-            mass=jnp.ones(2), applied_force=lambda t, q, v: jnp.zeros_like(q)
-        ).vector_field(0.0, PhaseSpaceState(jnp.ones(3), jnp.zeros(3)))
+        ForcedNewtonianSystem(mass=jnp.ones(2), applied_force=lambda t, q, v: jnp.zeros_like(q)).vector_field(
+            0.0, PhaseSpaceState(jnp.ones(3), jnp.zeros(3))
+        )
     with pytest.raises(ValueError, match="scalar"):
         ForcedNewtonianSystem(
-            mass=1.0, potential=lambda q: jnp.ones(2),
+            mass=1.0,
+            potential=lambda q: jnp.ones(2),
             applied_force=lambda t, q, v: jnp.zeros_like(q),
         ).vector_field(0.0, scalar)
 
