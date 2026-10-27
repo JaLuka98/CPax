@@ -9,7 +9,7 @@ import numpy as np
 from jax.core import Tracer
 
 from cpax.dynamics._systems import Time
-from cpax.mechanics import NewtonianSystem
+from cpax.mechanics import NewtonianSystem, PhaseSpaceState
 from cpax.problems import IVP
 from cpax.results import Solution, SolutionStatus
 
@@ -79,8 +79,10 @@ def solve_diffrax(
             return system.force(q)
 
         terms = (diffrax.ODETerm(qdot), diffrax.ODETerm(pdot))
+        backend_y0 = (problem.y0.q, problem.y0.p)
     else:
         terms = diffrax.ODETerm(vector_field)
+        backend_y0 = problem.y0
 
     t0, t1 = problem.t_span
     backend_solution = diffrax.diffeqsolve(
@@ -89,7 +91,7 @@ def solve_diffrax(
         t0=t0,
         t1=t1,
         dt0=dt0,
-        y0=problem.y0,
+        y0=backend_y0,
         args=problem.args,
         saveat=_resolve_saveat(saveat, problem.t_span),
         stepsize_controller=stepsize_controller,
@@ -106,9 +108,10 @@ def solve_diffrax(
         int(SolutionStatus.SUCCESS),
         int(SolutionStatus.FAILED),
     )
+    ys = PhaseSpaceState(*backend_solution.ys) if isinstance(solver, VelocityVerlet) else backend_solution.ys
     return Solution(
         ts=backend_solution.ts,
-        ys=backend_solution.ys,
+        ys=ys,
         status=status,
         stats=dict(backend_solution.stats),
         metadata={
