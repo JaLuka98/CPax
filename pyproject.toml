@@ -106,5 +106,10 @@ docstring-code-format = true
 
 # Type-check the public library. Tests and examples can be added after the
 # scientific API has been fully annotated.
+# Benchmark modules are intentionally kept outside the installable src/ tree;
+# tests may import them directly from the repository root.
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 [tool.ty.src]
 include = ["src"]

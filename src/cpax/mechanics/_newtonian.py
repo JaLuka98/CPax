@@ -12,6 +12,7 @@ from ._mass import _mass_for, _validate_mass
 from ._state import PhaseSpaceState
 
 type Potential = Callable[..., jax.Array]
+type ConservativeForce = Callable[..., jax.Array]
 
 
 def _scalar_energy(value: Any, name: str) -> jax.Array:
@@ -27,11 +28,19 @@ class NewtonianSystem(DynamicalSystem):
     `potential(q)` is used when `params=None`; otherwise the signature
     is `potential(q, params)`. Parameters are stored in this system, not
     in `IVP.args`. Coordinates and momenta use `PhaseSpaceState`.
+
+    Experimental: `force_fn` may bypass automatic differentiation when
+    supplied. It must equal `-grad(potential)(q)` across the physical
+    domain. CPax checks its output contract but cannot certify this identity.
+    Inconsistent callbacks invalidate energy diagnostics and can invalidate
+    the conservative/symplectic interpretation. Omitting `force_fn`
+    retains the established automatic-differentiation path.
     """
 
     potential: Potential
     mass: jax.Array
     params: Any
+    force_fn: ConservativeForce | None
 
     def __init__(
         self,
@@ -39,13 +48,17 @@ class NewtonianSystem(DynamicalSystem):
         potential: Potential,
         mass: float | jax.Array,
         params: Any = None,
+        force_fn: ConservativeForce | None = None,
     ) -> None:
         if not callable(potential):
             raise TypeError("potential must be callable.")
+        if force_fn is not None and not callable(force_fn):
+            raise TypeError("force_fn must be callable or None.")
         m = _validate_mass(mass)
         object.__setattr__(self, "potential", potential)
         object.__setattr__(self, "mass", m)
         object.__setattr__(self, "params", params)
+        object.__setattr__(self, "force_fn", force_fn)
 
     def _mass_for(self, q: jax.Array) -> jax.Array:
         return _mass_for(self.mass, q)
@@ -56,8 +69,21 @@ class NewtonianSystem(DynamicalSystem):
         return _scalar_energy(self.potential(q, self.params), "potential")
 
     def force(self, q: jax.Array) -> jax.Array:
-        """The negative gradient of the scalar potential energy."""
-        return -jax.grad(self._potential_value)(q)
+        """Return the conservative force, from `force_fn` or `-grad(V)`."""
+        if self.force_fn is None:
+            return -jax.grad(self._potential_value)(q)
+        value = self.force_fn(q) if self.params is None else self.force_fn(q, self.params)
+        try:
+            result = jnp.asarray(value)
+        except (ValueError, TypeError) as exc:
+            raise TypeError("force_fn must return a real floating-point array.") from exc
+        if result.dtype.kind != "f":
+            raise TypeError("force_fn must return a real floating-point array.")
+        if result.shape != q.shape:
+            raise ValueError(f"force_fn output shape {result.shape} must match coordinates shape {q.shape}.")
+        if result.dtype != q.dtype:
+            raise TypeError(f"force_fn output dtype {result.dtype} must match coordinates dtype {q.dtype}.")
+        return result
 
     def vector_field(self, t: Any, state: PhaseSpaceState, args: Any = None) -> PhaseSpaceState:
         """Return velocity and momentum derivative in canonical coordinates."""
