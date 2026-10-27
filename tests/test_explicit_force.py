@@ -151,3 +151,29 @@ def test_position_dependent_force_need_not_be_conservative():
     q = jnp.asarray([1.0, 0.0])
     jac = jax.jacfwd(system.force)(q)
     assert not bool(jnp.allclose(jac, jac.T))
+
+
+def test_benchmark_speedup_convention():
+    from benchmarks.force_comparison import _speedup
+
+    assert _speedup(4.0, 2.0) == 2.0  # Analytical is twice as fast.
+    assert _speedup(2.0, 4.0) == 0.5  # AD is twice as fast.
+
+
+def test_benchmark_trajectory_and_parameter_gradient_checks():
+    from benchmarks.force_comparison import _integrate, _validate_parameter_gradients
+    from benchmarks.force_models import gravity
+
+    with jax.enable_x64(True):
+        case = gravity(size=3, dtype=jnp.float64)
+        result = _integrate(case, steps=4, dt=0.001, trials=1, repetitions=1)
+        assert result["analytical_speedup_factor_vs_ad"] > 0
+        np.testing.assert_allclose(
+            result["validation"]["final_energy_ad"],
+            result["validation"]["final_energy_analytical"],
+            rtol=1e-9,
+        )
+        gradient = _validate_parameter_gradients(case, steps=4, dt=0.001)
+        np.testing.assert_allclose(
+            gradient["gradient_ad"], gradient["gradient_analytical"], rtol=1e-7, atol=1e-10
+        )
