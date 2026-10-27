@@ -75,7 +75,7 @@ For a saved trajectory, ``jax.vmap(system.energy)(solution.ys)``
 evaluates its energy at every saved point.
 
 Optional analytical conservative forces
--------------------------------------
+---------------------------------------
 
 By default, ``NewtonianSystem`` computes ``force(q)`` using
 ``-jax.grad(potential)(q)``. For performance-sensitive workloads, a
