@@ -1,7 +1,7 @@
 """JAX-based tools for defining and solving continuous-time dynamical systems.
 
 The public API separates physical systems, initial-value problems, numerical
-solvers, and structured solutions, with built-in support for conservative
+solvers, and structured solutions, with built-in support for conservative and driven
 classical mechanics.
 """
 

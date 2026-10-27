@@ -122,11 +122,11 @@ The :doc:`../examples/advanced` page illustrates a planetary system.
 Scope and numerical accuracy
 ----------------------------
 
-The Newtonian and Hamiltonian classes currently support autonomous,
-conservative models. They do not directly express external time-dependent
-forces, damping, general mass matrices, hard constraints or collision
-events. Non-None ``IVP.args`` are rejected for these systems; use
-``system.params``.
+``NewtonianSystem`` and ``HamiltonianSystem`` support autonomous
+conservative models; ``ForcedNewtonianSystem`` also supports damping and
+external driving. General mass matrices, hard constraints, and collision
+events are outside the current scope. Non-None ``IVP.args`` are rejected
+for all three mechanics models; use ``system.params``.
 
 Physical domains are not automatically enforced, and CPax does not
 clip positions or regularise singular potentials. An exact autonomous
@@ -135,3 +135,71 @@ generally does not conserve either energy or symplectic structure
 exactly. Inspect drift and convergence; for suitable separable
 Hamiltonians, the retained fixed-step leapfrog integrator offers a
 symplectic alternative.
+
+Applied forces and driven mechanics
+-----------------------------------
+
+``ForcedNewtonianSystem`` describes constant-diagonal-mass systems with
+canonical momenta ``p``, velocities ``v = p / mass``, and the equations
+
+.. math::
+
+   \dot q = p/m, \qquad \dot p = -\nabla_q V(q) + F_{\mathrm{applied}}(t,q,v).
+
+The potential is optional, autonomous, and scalar-valued. When absent,
+it contributes zero energy and zero conservative force. Generalised
+applied forces may depend on time, position, and velocity, including
+torques for angular coordinates. The potential must be differentiable
+by ``jax.grad``; applied force callbacks must be JAX-compatible and return
+a real floating-point array with *exactly* the shape of ``q``.
+Implicit broadcasting of a scalar force over vector coordinates is not
+supported. Each state coordinate and momentum leaf must use the same
+floating-point dtype.
+
+With ``params=None``, callback signatures are ``potential(q)`` and
+``applied_force(t, q, velocity)``. With non-None parameters they are
+``potential(q, params)`` and ``applied_force(t, q, velocity, params)``.
+Parameters belong to the system, not ``IVP.args``. The applied force
+receives *velocity*, not momentum. Identical mass shapes and broadcasting
+rules to ``NewtonianSystem`` apply. All forces must be generalised
+forces conjugate to the coordinates (torque for angle), in units consistent
+with the mass/inertia and potential. Use ``jax.vmap`` for independent
+problems instead of treating the coordinate axis as a batch axis.
+
+.. code-block:: python
+
+   import cpax
+   import jax.numpy as jnp
+   from cpax.mechanics import ForcedNewtonianSystem, PhaseSpaceState
+
+   system = ForcedNewtonianSystem(
+       mass=1.0,
+       potential=lambda q: 0.5 * q**2,
+       applied_force=lambda t, q, v: -0.1 * v + 0.2 * jnp.cos(t),
+   )
+   problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 10.0))
+   solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(101))
+
+The instantaneous methods ``kinetic_energy(state)``,
+``potential_energy(state)``, and ``mechanical_energy(state)``
+return scalar energies, while ``applied_power(t, state)`` gives
+the instantaneous work rate. For smooth autonomous potentials and
+constant diagonal mass, exact trajectories satisfy
+
+.. math::
+
+   \frac{dE_{\mathrm{mech}}}{dt} = \sum_i v_i F_{\mathrm{applied},i}.
+
+Thus mechanical energy generally is *not* conserved. For viscous damping,
+the energy derivative is non-positive without external driving.
+Saved-point finite differences or numerical quadrature may introduce
+errors into energy-balance checks. Adaptive Runge--Kutta integration
+does not preserve symplectic structure, and strongly damped problems
+can require stiffness-aware methods. No clipping or regularisation is
+performed. JAX transformations are supported for suitable differentiable
+callbacks and parameter PyTrees, not for every piecewise or singular force.
+
+``VelocityVerlet`` intentionally rejects ``ForcedNewtonianSystem``,
+including the zero-force limit: use ``NewtonianSystem`` if you need
+the established conservative symplectic contract. ``cpax.solve``
+continues to default to Tsit5 without inferring geometric structure.
