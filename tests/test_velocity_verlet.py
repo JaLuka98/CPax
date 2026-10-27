@@ -34,9 +34,7 @@ def test_second_order_convergence():
     errors = []
     for n in (20, 40, 80, 160):
         solution = integrate(oscillator(), 1.0 / n)
-        error = jnp.linalg.norm(
-            jnp.stack([solution.ys.q[-1] - jnp.cos(1.0), solution.ys.p[-1] + jnp.sin(1.0)])
-        )
+        error = jnp.linalg.norm(jnp.stack([solution.ys.q[-1] - jnp.cos(1.0), solution.ys.p[-1] + jnp.sin(1.0)]))
         errors.append(float(error))
         assert bool(solution.is_success)
         assert solution.metadata["solver"] == "VelocityVerlet"
@@ -45,12 +43,15 @@ def test_second_order_convergence():
     assert np.all(orders > 1.8)
 
 
-@pytest.mark.parametrize("shape,mass", [
-    ((), 2.0),
-    ((3,), jnp.array([1.0, 2.0, 4.0])),
-    ((2, 2), jnp.array([1.0, 2.0])),
-    ((2, 2), jnp.array([[1.0, 2.0], [3.0, 4.0]])),
-])
+@pytest.mark.parametrize(
+    "shape,mass",
+    [
+        ((), 2.0),
+        ((3,), jnp.array([1.0, 2.0, 4.0])),
+        ((2, 2), jnp.array([1.0, 2.0])),
+        ((2, 2), jnp.array([[1.0, 2.0], [3.0, 4.0]])),
+    ],
+)
 def test_shape_and_mass_broadcast(shape, mass):
     q = jnp.ones(shape)
     p = jnp.zeros(shape)
@@ -118,12 +119,15 @@ def test_bad_configuration_is_rejected():
         cpax.solve(problem, solver=VelocityVerlet(), dt0=0.1, rtol=1e-7)
     with pytest.raises(ValueError, match="ConstantStepSize"):
         cpax.solve(
-            problem, solver=VelocityVerlet(), dt0=0.1,
+            problem,
+            solver=VelocityVerlet(),
+            dt0=0.1,
             stepsize_controller=diffrax.PIDController(rtol=1e-5, atol=1e-7),
         )
     general = HamiltonianSystem(hamiltonian=lambda q, p: (q**2 + p**2) / 2)
     with pytest.raises(TypeError, match="NewtonianSystem"):
         cpax.solve(
             cpax.IVP(general, PhaseSpaceState(1.0, 0.0), (0.0, 1.0)),
-            solver=VelocityVerlet(), dt0=0.1,
+            solver=VelocityVerlet(),
+            dt0=0.1,
         )
