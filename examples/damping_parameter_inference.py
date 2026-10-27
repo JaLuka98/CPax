@@ -51,8 +51,10 @@ def analytical_position(gamma: jax.Array, times: jax.Array) -> jax.Array:
     """
     beta = gamma / (2.0 * MASS)
     omega_d = jnp.sqrt(SPRING_CONSTANT / MASS - beta**2)
-    return INITIAL_POSITION * jnp.exp(-beta * times) * (
-        jnp.cos(omega_d * times) + beta / omega_d * jnp.sin(omega_d * times)
+    return (
+        INITIAL_POSITION
+        * jnp.exp(-beta * times)
+        * (jnp.cos(omega_d * times) + beta / omega_d * jnp.sin(omega_d * times))
     )
 
 
@@ -154,7 +156,9 @@ def main() -> None:
     print(f"Fit minus truth:             {float(gamma_hat - TRUE_DAMPING):+.6f}")
     print(f"Initial mean NLL:            {float(loss_history[0]):.6f}")
     print(f"Final mean NLL:              {float(loss_history[-1]):.6f}")
-    print(f"Final absolute log-gradient: {float(jnp.abs(jax.grad(mean_nll_log_damping)(jnp.log(gamma_hat), times, observations))):.3e}")
+    print(
+        f"Final absolute log-gradient: {float(jnp.abs(jax.grad(mean_nll_log_damping)(jnp.log(gamma_hat), times, observations))):.3e}"
+    )
 
     true_position = analytical_position(jnp.asarray(TRUE_DAMPING), times)
     fitted_position = simulated_position(gamma_hat, times)
@@ -169,9 +173,7 @@ def main() -> None:
     # The profile is obtained by actually re-solving CPax at each candidate
     # damping value; the shaded +/- 1 SE range comes from the *local* Hessian.
     profile_gamma = jnp.linspace(gamma_hat - 5.0 * standard_error, gamma_hat + 5.0 * standard_error, 51)
-    profile_nll = jax.vmap(negative_log_likelihood, in_axes=(0, None, None))(
-        profile_gamma, times, observations
-    )
+    profile_nll = jax.vmap(negative_log_likelihood, in_axes=(0, None, None))(profile_gamma, times, observations)
     axes[1].plot(profile_gamma, profile_nll - jnp.min(profile_nll), label="Numerical NLL profile")
     axes[1].axvline(float(gamma_hat), linestyle="--", label="Fitted damping")
     axes[1].axvline(TRUE_DAMPING, linestyle=":", label="True damping")
