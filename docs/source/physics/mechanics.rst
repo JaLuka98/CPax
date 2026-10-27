@@ -74,6 +74,67 @@ The methods ``force(q)``, ``kinetic_energy(state)``,
 For a saved trajectory, ``jax.vmap(system.energy)(solution.ys)``
 evaluates its energy at every saved point.
 
+Optional analytical conservative forces
+-------------------------------------
+
+By default, ``NewtonianSystem`` computes ``force(q)`` using
+``-jax.grad(potential)(q)``. For performance-sensitive workloads, a
+user-supplied analytical force can optionally replace that evaluation.
+The potential remains **required** and is still used by
+``potential_energy(state)`` and ``energy(state)``.
+
+.. code-block:: python
+
+   import jax
+   import jax.numpy as jnp
+   import numpy as np
+   from cpax.mechanics import NewtonianSystem
+
+   def potential(q):
+       return 0.5 * jnp.sum(q**2)
+
+   def analytical_force(q):
+       return -q
+
+   system = NewtonianSystem(
+       potential=potential,
+       force_fn=analytical_force,
+       mass=1.0,
+   )
+
+   # Recommended numerical consistency check at relevant coordinates:
+   q = jnp.array([0.3, -0.7])
+   np.testing.assert_allclose(
+       system.force(q), -jax.grad(potential)(q),
+       rtol=1e-5, atol=1e-6,
+   )
+
+With ``params=None``, the callback signature is ``force_fn(q)``.
+When ``params`` is supplied, it is ``force_fn(q, params)``.
+The result must be a real floating-point array of **exactly** the same
+shape and dtype as ``q``; scalar broadcasting over multiple coordinates
+is not implicit. Callbacks must be JAX-compatible for use with JIT,
+vectorisation, and differentiable simulations.
+
+**Physics requirement:** The explicit force must equal
+``-jax.grad(potential)(q)`` on the relevant physical domain. CPax
+checks the force callback's output shape and dtype, **not** its
+mathematical consistency with the potential. An inconsistent callback
+can invalidate the reported mechanical energy, and a non-conservative
+force can invalidate Velocity Verlet's Hamiltonian/symplectic guarantees.
+For arbitrary applied or velocity-dependent forces, use
+``ForcedNewtonianSystem`` instead. Numerical tests at representative
+configurations are recommended but do not prove global equivalence.
+An opt-in consistency-checking utility is tracked in
+`issue #75 <https://github.com/JaLuka98/CPax/issues/75>`_.
+
+Analytical forces can be faster for some interactions, particularly dense
+particle systems, but are **not necessarily faster** than automatic
+differentiation. Benchmark representative complete simulations in the
+required precision and on the intended hardware. See
+:doc:`../development/force-investigation` for benchmark methodology,
+measurements, and limitations.
+
 General Hamiltonians
 --------------------
 
