@@ -31,7 +31,9 @@ uv sync
 uv run pytest tests/test_explicit_force.py
 uv run python benchmarks/force_comparison.py --output force-f32.json
 uv run python benchmarks/force_comparison.py --precision float64 --output force-f64.json
-uv run python benchmarks/force_comparison.py --integration-steps 100 --output integrated.json
+uv run python benchmarks/force_comparison.py --precision float64 --sizes 8 32 128 256 1024 \
+    --integration-steps 100 --integration-sizes 128 256 1024 \
+    --integration-dt 0.001 --output integrated.json
 ```
 
 To investigate CPU versus GPU, use an appropriately installed JAX backend.
@@ -44,6 +46,45 @@ microbenchmarks, not pure device-kernel timings. The script records JAX
 versions, Python version, backend, devices, compiler allocation estimates
 (if supported), error norms, and timing variability. Compiler memory
 estimates do not equal peak process RSS or peak device residency.
+
+## Performance and physical validation
+
+The JSON field `analytical_speedup_factor_vs_ad` is defined as
+`AD runtime / analytical runtime`. Consequently, **values above one
+mean analytical evaluation is faster**. The earlier ambiguous field
+`evaluation_speedup_ad_over_analytical` has been replaced.
+
+Passing `--integration-steps` enables complete CPax Velocity Verlet
+benchmarks for selected `--integration-sizes` (defaults: 128, 256, 1024).
+These integrate the **same initial states** and compare final positions,
+momenta, reported energies, normalised energy change and, for gravity,
+total momentum norms. The JSON includes end-to-end timing and speedup
+for both force strategies. No fixed energy-drift acceptance threshold is
+applied: integration accuracy depends on time step, initial configuration
+and physical timescale. The exact trajectory comparison requires
+precision-appropriate agreement of both implementations.
+
+The full-integration mode also checks `jax.jit`, `jax.vmap`, and
+`jax.grad` of a smaller gravitational trajectory with respect to a
+differentiable interaction-strength parameter (default: 8 particles).
+The two gradient pathways are compared with each other and with a
+central-difference sanity check. This is not an exhaustive proof of
+differentiability for all systems or callbacks.
+
+Large `N` full trajectories can require substantial compilation time
+and memory, particularly with the JAX/Diffrax adjoint and solver states.
+Start with a modest number of time steps and increase gradually.
+The integration benchmark measures compiled CPax solves, unlike the
+isolated force-evaluation benchmark. The two speedups need not agree.
+
+The run supplied by the maintainer used macOS arm64, Python 3.12.5,
+JAX 0.12.0, jaxlib 0.11.2 and float64 on CPU. Its 1024-particle force
+evaluation took approximately 3118 microseconds (AD) versus
+1029 microseconds (analytical), or **3.03× faster analytically**;
+the force relative L2 difference was approximately 3.0e-16.
+At 2056 particles, the reported speedup was approximately 1.53×.
+These are force-kernel results, not complete simulation speedups,
+and are not a general hardware performance guarantee.
 
 ## Preliminary single-machine CPU results
 
