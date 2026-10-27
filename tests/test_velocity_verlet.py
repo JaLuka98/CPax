@@ -149,7 +149,7 @@ def test_two_body_gravity_symplectic_integration():
 
     assert bool(result.is_success)
     assert result.ys.q.shape == (501, 2, 2)
-    np.testing.assert_allclose(result.ts[[0, -1]], [0.0, 1.0], atol=1e-6)
+    np.testing.assert_allclose(result.ts[jnp.array([0, -1])], [0.0, 1.0], atol=1e-6)
     np.testing.assert_allclose(result.ys.q[0], q0)
     initial_total_momentum = jnp.sum(p0, axis=0)
     total_momenta = jnp.sum(result.ys.p, axis=1)
