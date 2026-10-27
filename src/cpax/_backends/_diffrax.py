@@ -9,7 +9,7 @@ import numpy as np
 from jax.core import Tracer
 
 from cpax.dynamics._systems import Time
-from cpax.mechanics import NewtonianSystem, PhaseSpaceState
+from cpax.mechanics import NewtonianSystem
 from cpax.problems import IVP
 from cpax.results import Solution, SolutionStatus
 
@@ -108,7 +108,13 @@ def solve_diffrax(
         int(SolutionStatus.SUCCESS),
         int(SolutionStatus.FAILED),
     )
-    ys = PhaseSpaceState(*backend_solution.ys) if isinstance(solver, VelocityVerlet) else backend_solution.ys
+    # Rebuild the public state PyTree without calling its constructor:
+    # saved trajectories acquire a leading time axis, even for matrix states.
+    ys = (
+        jax.tree.unflatten(jax.tree.structure(problem.y0), backend_solution.ys)
+        if isinstance(solver, VelocityVerlet)
+        else backend_solution.ys
+    )
     return Solution(
         ts=backend_solution.ts,
         ys=ys,
