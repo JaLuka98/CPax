@@ -97,7 +97,6 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "src/cpax/__init__.py" = ["F401"]
-"src/cpax/ode/__init__.py" = ["F401"]
 
 [tool.ruff.format]
 quote-style = "double"
