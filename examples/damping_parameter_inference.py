@@ -122,10 +122,11 @@ def fit_damping(
     not presented as a general-purpose optimiser. Optimising log(gamma)
     enforces positivity without clipping the physical damping parameter.
 
-    Uncertainty is the inverse square root of the curvature of the *full*
-    NLL with respect to gamma at the fitted minimum. This local Gaussian
-    approximation requires an identifiable interior optimum; it is not a
-    general confidence-interval construction.
+    Uncertainty uses the inverse square root of the expected Fisher
+    information (Gauss-Newton curvature) computed from first-order trajectory
+    sensitivities at the fitted damping. It assumes independent Gaussian
+    noise of known variance, an identifiable interior optimum, and a local
+    Gaussian approximation; it is not a general confidence interval.
     """
     log_gamma = jnp.log(jnp.asarray(initial_gamma))
     history = []
@@ -136,13 +137,16 @@ def fit_damping(
 
     gamma_hat = jnp.exp(log_gamma)
     history.append(mean_nll_log_damping(log_gamma, times, observations))
-    # Diffrax's default checkpointing adjoint uses custom VJPs. JAX's
-    # jax.hessian uses forward-over-reverse differentiation, which cannot
-    # JVP through those custom VJPs. Two reverse-mode passes are supported.
-    curvature = jax.grad(jax.grad(negative_log_likelihood))(gamma_hat, times, observations)
-    if not bool(jnp.isfinite(curvature) & (curvature > 0)):
-        raise RuntimeError("Cannot estimate damping uncertainty: NLL curvature is not finite and positive.")
-    standard_error = 1.0 / jnp.sqrt(curvature)
+    # For independent Gaussian errors of known variance, the expected
+    # information (and Gauss-Newton curvature) is sum_i (dq_i/dgamma)^2 / sigma^2.
+    # This only needs first-order reverse-mode sensitivity through Diffrax.
+    # Differentiating the numerical solve twice is not generally supported
+    # by its default checkpointing adjoint.
+    sensitivity = jax.jacrev(simulated_position, argnums=0)(gamma_hat, times)
+    information = jnp.sum((sensitivity / OBSERVATION_SIGMA) ** 2)
+    if not bool(jnp.isfinite(information) & (information > 0)):
+        raise RuntimeError("Cannot estimate damping uncertainty: Fisher information is not finite and positive.")
+    standard_error = 1.0 / jnp.sqrt(information)
     return gamma_hat, standard_error, jnp.stack(history)
 
 
