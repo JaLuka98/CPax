@@ -35,8 +35,8 @@ class InferenceConfig:
     end_time: float = 8.0
     num_observations: int = 81
     noise_seed: int = 2027
-    rtol: float = 1e-6
-    atol: float = 1e-8
+    rtol: float = 1e-5
+    atol: float = 1e-7
 
 
 def potential(q: jax.Array, params: dict[str, jax.Array]) -> jax.Array:

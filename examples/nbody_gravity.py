@@ -20,72 +20,72 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import cpax
 from cpax.mechanics import NewtonianSystem, PhaseSpaceState, gravitational_potential
 
-jax.config.update("jax_enable_x64", True)
-
-
 def simulate():
-    """Return the physical model and numerical solution."""
-    sun_mass = 1.0
-    earth_mass = 3.003e-6
-    mars_mass = 3.227e-7
-    jupiter_mass = 9.546e-4
-    comet_mass = 1e-10
-    masses = jnp.array([sun_mass, earth_mass, mars_mass, jupiter_mass, comet_mass])
-    gravitational_constant = 4.0 * jnp.pi**2
-
-    earth_orbit_radius = 1.0
-    mars_orbit_radius = 1.524
-    jupiter_orbit_radius = 5.204
-    comet_semi_major_axis = 40.0
-    comet_perihelion = 1.5
-    comet_start_radius = 15.0
-    comet_eccentricity = 1.0 - comet_perihelion / comet_semi_major_axis
-    comet_specific_angular_momentum = jnp.sqrt(
-        gravitational_constant * comet_semi_major_axis * (1.0 - comet_eccentricity**2)
-    )
-    comet_tangential_speed = comet_specific_angular_momentum / comet_start_radius
-    comet_speed = jnp.sqrt(gravitational_constant * (2.0 / comet_start_radius - 1.0 / comet_semi_major_axis))
-    comet_inbound_speed = -jnp.sqrt(comet_speed**2 - comet_tangential_speed**2)
-
-    # Place the planets at distinct orbital phases. Their circular speeds are
-    # heliocentric; the common offset below puts the full system at rest.
-    relative_positions = jnp.array(
-        [
-            [0.0, 0.0],
-            [earth_orbit_radius, 0.0],
-            [-mars_orbit_radius, 0.0],
-            [0.0, -jupiter_orbit_radius],
-            [comet_start_radius, 0.0],
-        ]
-    )
-    relative_velocities = jnp.array(
-        [
-            [0.0, 0.0],
-            [0.0, jnp.sqrt(gravitational_constant / earth_orbit_radius)],
-            [0.0, -jnp.sqrt(gravitational_constant / mars_orbit_radius)],
-            [jnp.sqrt(gravitational_constant / jupiter_orbit_radius), 0.0],
-            [comet_inbound_speed, comet_tangential_speed],
-        ]
-    )
-    center_of_mass = jnp.sum(masses[:, None] * relative_positions, axis=0) / jnp.sum(masses)
-    center_of_mass_velocity = jnp.sum(masses[:, None] * relative_velocities, axis=0) / jnp.sum(masses)
-    positions = relative_positions - center_of_mass
-    velocities = relative_velocities - center_of_mass_velocity
-    system = NewtonianSystem(potential=gravitational_potential(masses), mass=masses)
-    problem = cpax.IVP(system, PhaseSpaceState(q=positions, p=masses[:, None] * velocities), (0.0, 10.0))
-    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(751), rtol=1e-8, atol=1e-10, max_steps=100000)
-    if not bool(solution.is_success):
-        raise RuntimeError("Planetary simulation failed.")
-    return system, solution
-
+    """Return the physical model and numerical solution in float64."""
+    # Small-mass momenta span many orders of magnitude; use float64 throughout.
+    with jax.enable_x64(True):
+        sun_mass = 1.0
+        earth_mass = 3.003e-6
+        mars_mass = 3.227e-7
+        jupiter_mass = 9.546e-4
+        comet_mass = 1e-10
+        masses = jnp.array([sun_mass, earth_mass, mars_mass, jupiter_mass, comet_mass])
+        gravitational_constant = 4.0 * jnp.pi**2
+    
+        earth_orbit_radius = 1.0
+        mars_orbit_radius = 1.524
+        jupiter_orbit_radius = 5.204
+        comet_semi_major_axis = 40.0
+        comet_perihelion = 1.5
+        comet_start_radius = 15.0
+        comet_eccentricity = 1.0 - comet_perihelion / comet_semi_major_axis
+        comet_specific_angular_momentum = jnp.sqrt(
+            gravitational_constant * comet_semi_major_axis * (1.0 - comet_eccentricity**2)
+        )
+        comet_tangential_speed = comet_specific_angular_momentum / comet_start_radius
+        comet_speed = jnp.sqrt(gravitational_constant * (2.0 / comet_start_radius - 1.0 / comet_semi_major_axis))
+        comet_inbound_speed = -jnp.sqrt(comet_speed**2 - comet_tangential_speed**2)
+    
+        # Place the planets at distinct orbital phases. Their circular speeds are
+        # heliocentric; the common offset below puts the full system at rest.
+        relative_positions = jnp.array(
+            [
+                [0.0, 0.0],
+                [earth_orbit_radius, 0.0],
+                [-mars_orbit_radius, 0.0],
+                [0.0, -jupiter_orbit_radius],
+                [comet_start_radius, 0.0],
+            ]
+        )
+        relative_velocities = jnp.array(
+            [
+                [0.0, 0.0],
+                [0.0, jnp.sqrt(gravitational_constant / earth_orbit_radius)],
+                [0.0, -jnp.sqrt(gravitational_constant / mars_orbit_radius)],
+                [jnp.sqrt(gravitational_constant / jupiter_orbit_radius), 0.0],
+                [comet_inbound_speed, comet_tangential_speed],
+            ]
+        )
+        center_of_mass = jnp.sum(masses[:, None] * relative_positions, axis=0) / jnp.sum(masses)
+        center_of_mass_velocity = jnp.sum(masses[:, None] * relative_velocities, axis=0) / jnp.sum(masses)
+        positions = relative_positions - center_of_mass
+        velocities = relative_velocities - center_of_mass_velocity
+        system = NewtonianSystem(potential=gravitational_potential(masses), mass=masses)
+        problem = cpax.IVP(system, PhaseSpaceState(q=positions, p=masses[:, None] * velocities), (0.0, 10.0))
+        solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(751), rtol=1e-8, atol=1e-10, max_steps=100000)
+        if not bool(solution.is_success):
+            raise RuntimeError("Planetary simulation failed.")
+        return system, solution
+    
 
 def diagnostics(system, solution) -> tuple[np.ndarray, np.ndarray]:
     """Return time series of total energy and planar angular momentum."""
-    energies = jax.vmap(system.energy)(solution.ys)
-    q, p = solution.ys.q, solution.ys.p
-    angular_momentum = jnp.sum(q[..., 0] * p[..., 1] - q[..., 1] * p[..., 0], axis=1)
-    return np.asarray(energies), np.asarray(angular_momentum)
-
+    with jax.enable_x64(True):
+        energies = jax.vmap(system.energy)(solution.ys)
+        q, p = solution.ys.q, solution.ys.p
+        angular_momentum = jnp.sum(q[..., 0] * p[..., 1] - q[..., 1] * p[..., 0], axis=1)
+        return np.asarray(energies), np.asarray(angular_momentum)
+    
 
 def animate(solution, output: str | Path = "nbody_simulation.gif", *, fps: int = 20) -> None:
     """Render the computed trajectory to a GIF; never called by Sphinx."""
