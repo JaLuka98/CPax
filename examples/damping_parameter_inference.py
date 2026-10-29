@@ -136,7 +136,10 @@ def fit_damping(
 
     gamma_hat = jnp.exp(log_gamma)
     history.append(mean_nll_log_damping(log_gamma, times, observations))
-    curvature = jax.hessian(negative_log_likelihood)(gamma_hat, times, observations)
+    # Diffrax's default checkpointing adjoint uses custom VJPs. JAX's
+    # jax.hessian uses forward-over-reverse differentiation, which cannot
+    # JVP through those custom VJPs. Two reverse-mode passes are supported.
+    curvature = jax.grad(jax.grad(negative_log_likelihood))(gamma_hat, times, observations)
     if not bool(jnp.isfinite(curvature) & (curvature > 0)):
         raise RuntimeError("Cannot estimate damping uncertainty: NLL curvature is not finite and positive.")
     standard_error = 1.0 / jnp.sqrt(curvature)
