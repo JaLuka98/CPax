@@ -173,7 +173,8 @@ def main() -> None:
     gamma_hat, standard_error, loss_history = fit_damping(times, observations, config)
 
     # Report optimisation convergence and the ground-truth comparison.
-    objective = lambda log_gamma: mean_nll_log_damping(log_gamma, times, observations, config)
+    def objective(log_gamma: jax.Array) -> jax.Array:
+        return mean_nll_log_damping(log_gamma, times, observations, config)
     print(f"True damping:                {config.true_damping:.6f}")
     print(f"Known position noise sigma:  {config.observation_sigma:.6f}")
     print(f"Estimated damping:           {float(gamma_hat):.6f} +/- {float(standard_error):.6f} (approx. 1 SE)")
