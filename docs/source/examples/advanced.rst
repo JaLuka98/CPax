@@ -82,7 +82,10 @@ negative log-likelihood up to a parameter-independent constant:
    \sum_i \left[q_{\mathrm{CPax}}(t_i;\gamma)-q_i^{\mathrm{obs}}\right]^2.
 
 Its curvature at the optimum estimates the standard error,
-``sigma_gamma = 1/sqrt(NLL''(gamma_hat))``, under a **local quadratic
+``sigma_gamma = 1/sqrt(NLL''(gamma_hat))``, computed using two
+reverse-mode differentiation passes (``jax.grad(jax.grad(...))``).
+The default Diffrax adjoint does not support the forward-over-reverse
+transformation used by ``jax.hessian``. The estimate relies on a **local quadratic
 approximation** to the likelihood. This is an approximate conditional
 uncertainty, not a complete treatment of systematics, correlations,
 model misspecification or parameter identifiability. In particular,
