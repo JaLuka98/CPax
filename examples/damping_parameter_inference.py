@@ -139,7 +139,8 @@ def fit_damping(
     """
     # Capture immutable settings outside JAX's traced arguments: a plain
     # dataclass does not need to be registered as a JAX PyTree.
-    objective = lambda log_gamma: mean_nll_log_damping(log_gamma, times, observations, config)
+    def objective(log_gamma: jax.Array) -> jax.Array:
+        return mean_nll_log_damping(log_gamma, times, observations, config)
     value_and_grad = jax.jit(jax.value_and_grad(objective))
     log_gamma = jnp.log(jnp.asarray(initial_gamma))
     history = []
