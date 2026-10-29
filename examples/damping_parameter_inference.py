@@ -201,7 +201,9 @@ def main() -> None:
     # damping value; the shaded +/- 1 SE range comes from Fisher information.
     profile_gamma = jnp.linspace(gamma_hat - 5.0 * standard_error, gamma_hat + 5.0 * standard_error, 51)
     profile_nll = jax.vmap(lambda gamma: negative_log_likelihood(gamma, times, observations, config))(profile_gamma)
-    axes[1].plot(profile_gamma, profile_nll - jnp.min(profile_nll), label="Numerical NLL profile")
+    nll_at_fit = negative_log_likelihood(gamma_hat, times, observations, config)
+    axes[1].plot(profile_gamma, profile_nll - nll_at_fit, label="Numerical NLL profile")
+    axes[1].axhline(0.5, color="0.5", linestyle=":", label=r"$\Delta\mathrm{NLL}=0.5$ (68% profile)")
     axes[1].axvline(float(gamma_hat), linestyle="--", label="Fitted damping")
     axes[1].axvline(config.true_damping, linestyle=":", label="True damping")
     axes[1].axvspan(
@@ -210,7 +212,7 @@ def main() -> None:
         alpha=0.15,
         label="Fisher +/- 1 SE",
     )
-    axes[1].set(xlabel="Damping gamma", ylabel="NLL - min(NLL)", title="Likelihood curvature")
+    axes[1].set(xlabel="Damping gamma", ylabel="NLL - NLL(fitted)", title="Likelihood curvature")
     axes[1].grid()
     axes[1].legend()
     fig.tight_layout()
