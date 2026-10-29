@@ -20,6 +20,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import cpax
 from cpax.mechanics import NewtonianSystem, PhaseSpaceState, gravitational_potential
 
+
 def simulate():
     """Return the physical model and numerical solution in float64."""
     # Small-mass momenta span many orders of magnitude; use float64 throughout.
@@ -31,7 +32,7 @@ def simulate():
         comet_mass = 1e-10
         masses = jnp.array([sun_mass, earth_mass, mars_mass, jupiter_mass, comet_mass])
         gravitational_constant = 4.0 * jnp.pi**2
-    
+
         earth_orbit_radius = 1.0
         mars_orbit_radius = 1.524
         jupiter_orbit_radius = 5.204
@@ -45,7 +46,7 @@ def simulate():
         comet_tangential_speed = comet_specific_angular_momentum / comet_start_radius
         comet_speed = jnp.sqrt(gravitational_constant * (2.0 / comet_start_radius - 1.0 / comet_semi_major_axis))
         comet_inbound_speed = -jnp.sqrt(comet_speed**2 - comet_tangential_speed**2)
-    
+
         # Place the planets at distinct orbital phases. Their circular speeds are
         # heliocentric; the common offset below puts the full system at rest.
         relative_positions = jnp.array(
@@ -76,7 +77,7 @@ def simulate():
         if not bool(solution.is_success):
             raise RuntimeError("Planetary simulation failed.")
         return system, solution
-    
+
 
 def diagnostics(system, solution) -> tuple[np.ndarray, np.ndarray]:
     """Return time series of total energy and planar angular momentum."""
@@ -85,7 +86,7 @@ def diagnostics(system, solution) -> tuple[np.ndarray, np.ndarray]:
         q, p = solution.ys.q, solution.ys.p
         angular_momentum = jnp.sum(q[..., 0] * p[..., 1] - q[..., 1] * p[..., 0], axis=1)
         return np.asarray(energies), np.asarray(angular_momentum)
-    
+
 
 def animate(solution, output: str | Path = "nbody_simulation.gif", *, fps: int = 20) -> None:
     """Render the computed trajectory to a GIF; never called by Sphinx."""
