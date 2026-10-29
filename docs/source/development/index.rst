@@ -33,6 +33,18 @@ documentation, linting, typing and distribution builds. Pull requests should
 be focused and reviewable, with tests for changed behaviour and documentation
 for any public API change.
 
+Numerical test precision
+------------------------
+
+Keep representative IVP, analytical-reference and JAX transformation tests
+in float32; do not enable x64 globally in the test suite. When stringent
+accuracy is needed, use a scoped ``jax.enable_x64(True)`` context and construct
+model and initial-state arrays inside it. Choose integration tolerances from
+state scales and reference or convergence checks; determine assertion thresholds
+separately using the expected rounding, discretisation and physical errors.
+Conservation tests must measure meaningful physical drift rather than merely
+mirror solver tolerances. Preserve the solver defaults unless separately justified.
+
 Source layout
 -------------
 
