@@ -48,8 +48,8 @@ def test_decay_matches_analytical_trajectory(y0, rate):
         problem,
         solver=diffrax.Tsit5(),
         saveat=cpax.SaveAt.linspace(41),
-        rtol=1e-6,
-        atol=1e-8,
+        rtol=1e-5,
+        atol=1e-7,
     )
 
     # This reference integration deliberately covers the float32 path.
@@ -65,8 +65,8 @@ def test_oscillator_matches_analytical_position_and_momentum():
         problem,
         solver=diffrax.Tsit5(),
         saveat=cpax.SaveAt.linspace(121),
-        rtol=1e-6,
-        atol=1e-8,
+        rtol=1e-5,
+        atol=1e-7,
     )
     q, p = solution.ys
     omega, q0, p0 = 1.5, 1.0, 0.25
@@ -244,8 +244,8 @@ def test_hamiltonian_energy_drift_is_small_over_finite_interval():
         _oscillator_problem(omega=omega, t_span=(0.0, 10.0)),
         solver=diffrax.Tsit5(),
         saveat=cpax.SaveAt.linspace(201),
-        rtol=1e-6,
-        atol=1e-8,
+        rtol=1e-5,
+        atol=1e-7,
     )
     q, p = solution.ys
     energy = 0.5 * (p**2 + (omega * q) ** 2)

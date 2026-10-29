@@ -90,8 +90,8 @@ def test_grad_of_final_value_matches_analytic_sensitivity():
         return cpax.solve(
             problem,
             solver=diffrax.Tsit5(),
-            rtol=1e-6,
-            atol=1e-8,
+            rtol=1e-5,
+            atol=1e-7,
         ).ys[-1]
 
     rate = jnp.array(0.5)
@@ -117,8 +117,8 @@ def test_filter_grad_differentiates_array_valued_model_parameters():
         return cpax.solve(
             problem,
             solver=diffrax.Tsit5(),
-            rtol=1e-6,
-            atol=1e-8,
+            rtol=1e-5,
+            atol=1e-7,
         ).ys[-1]
 
     gradient = eqx.filter_grad(final_value)(DecaySystem(jnp.array(0.5)))

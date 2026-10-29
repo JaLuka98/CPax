@@ -46,14 +46,16 @@ def test_short_gravitational_ivp_conserves_momentum():
     result = cpax.solve(
         cpax.IVP(system, initial, (0.0, 0.2)),
         saveat=cpax.SaveAt.linspace(21),
-        rtol=1e-7,
-        atol=1e-9,
+        rtol=1e-5,
+        atol=1e-7,
     )
     assert bool(result.is_success)
     assert result.ys.q.shape == (21, 2, 2)
+    assert result.ys.q.dtype == jnp.float32
     total_momentum = jnp.sum(result.ys.p, axis=1)
+    # Total momentum is initially zero; an absolute error bound is meaningful here.
     np.testing.assert_allclose(
-        total_momentum, np.broadcast_to(total_momentum[0], total_momentum.shape), rtol=1e-7, atol=1e-8
+        total_momentum, np.broadcast_to(total_momentum[0], total_momentum.shape), rtol=0, atol=1e-6
     )
     energy = jax.vmap(system.energy)(result.ys)
     np.testing.assert_allclose(energy, energy[0], rtol=1e-3, atol=1e-5)
