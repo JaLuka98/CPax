@@ -178,7 +178,7 @@ def main() -> None:
     axes[0].legend()
 
     # The profile is obtained by actually re-solving CPax at each candidate
-    # damping value; the shaded +/- 1 SE range comes from the *local* Hessian.
+    # damping value; the shaded +/- 1 SE range comes from Fisher information.
     profile_gamma = jnp.linspace(gamma_hat - 5.0 * standard_error, gamma_hat + 5.0 * standard_error, 51)
     profile_nll = jax.vmap(negative_log_likelihood, in_axes=(0, None, None))(profile_gamma, times, observations)
     axes[1].plot(profile_gamma, profile_nll - jnp.min(profile_nll), label="Numerical NLL profile")
@@ -188,7 +188,7 @@ def main() -> None:
         float(gamma_hat - standard_error),
         float(gamma_hat + standard_error),
         alpha=0.15,
-        label="Local Hessian +/- 1 SE",
+        label="Fisher +/- 1 SE",
     )
     axes[1].set(xlabel="Damping gamma", ylabel="NLL - min(NLL)", title="Likelihood curvature")
     axes[1].legend()
