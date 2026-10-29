@@ -156,3 +156,29 @@ def test_auto_selection_supports_jit_vmap_and_grad():
     values = jax.vmap(compiled)(jnp.array([0.2, 0.5, 0.7]))
     np.testing.assert_allclose(values, 2 * np.exp(-np.array([0.2, 0.5, 0.7])), rtol=1e-4)
     np.testing.assert_allclose(jax.grad(compiled)(rate), -2 * np.exp(-0.5), rtol=5e-4)
+
+
+
+def test_float32_ivp_jit_vmap_and_grad_with_explicit_dtype():
+    """Keep the default-precision differentiable integration path covered."""
+    with jax.enable_x64(False):
+        system = VectorFieldSystem(_decay)
+
+        @jax.jit
+        def final_value(rate):
+            problem = cpax.IVP(
+                system,
+                jnp.asarray(2.0, dtype=jnp.float32),
+                (0.0, 1.0),
+                {"rate": rate},
+            )
+            return cpax.solve(problem, solver=diffrax.Tsit5(), rtol=1e-5, atol=1e-7).ys[-1]
+
+        rates = jnp.asarray([0.2, 0.5, 0.7], dtype=jnp.float32)
+        values = jax.vmap(final_value)(rates)
+        derivative = jax.grad(final_value)(rates[1])
+
+        assert values.dtype == jnp.float32
+        assert derivative.dtype == jnp.float32
+        np.testing.assert_allclose(values, 2.0 * np.exp(-np.asarray(rates)), rtol=2e-4, atol=2e-5)
+        np.testing.assert_allclose(derivative, -2.0 * np.exp(-0.5), rtol=5e-4, atol=5e-5)

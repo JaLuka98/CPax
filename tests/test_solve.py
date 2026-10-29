@@ -52,6 +52,8 @@ def test_decay_matches_analytical_trajectory(y0, rate):
         atol=1e-8,
     )
 
+    # This reference integration deliberately covers the float32 path.
+    assert solution.ys.dtype == jnp.float32
     expected = y0 * np.exp(-rate * np.asarray(solution.ts))
     np.testing.assert_allclose(solution.ys, expected, rtol=3e-5, atol=3e-6)
     assert bool(solution.is_success)
