@@ -24,7 +24,7 @@ TRUE_DAMPING = 0.55
 OBSERVATION_SIGMA = 0.035
 END_TIME = 8.0
 NUM_OBSERVATIONS = 81
-NOISE_SEED = 2026
+NOISE_SEED = 2027
 
 # These settings are adequate for the example; they do not control the output
 # sampling grid. JAX's default precision (usually float32) is left unchanged.
@@ -173,7 +173,7 @@ def main() -> None:
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     axes[0].scatter(times, observations, s=12, alpha=0.55, label="Noisy observations")
     axes[0].plot(times, true_position, label="Analytical ground truth")
-    axes[0].plot(times, fitted_position, "--", label="CPax fitted trajectory")
+    axes[0].plot(times, fitted_position, "--", label="CPax numerical trajectory")
     axes[0].set(xlabel="Time", ylabel="Position", title="Damping-parameter recovery")
     axes[0].legend()
 
