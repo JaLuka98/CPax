@@ -138,10 +138,12 @@ def fit_damping(
     noise of known variance, an identifiable interior optimum, and a local
     Gaussian approximation; it is not a general confidence interval.
     """
+
     # Capture immutable settings outside JAX's traced arguments: a plain
     # dataclass does not need to be registered as a JAX PyTree.
     def objective(log_gamma: jax.Array) -> jax.Array:
         return mean_nll_log_damping(log_gamma, times, observations, config)
+
     value_and_grad = jax.jit(jax.value_and_grad(objective))
     log_gamma = jnp.log(jnp.asarray(initial_gamma))
     history = []
@@ -175,15 +177,14 @@ def main() -> None:
     # Report optimisation convergence and the ground-truth comparison.
     def objective(log_gamma: jax.Array) -> jax.Array:
         return mean_nll_log_damping(log_gamma, times, observations, config)
+
     print(f"True damping:                {config.true_damping:.6f}")
     print(f"Known position noise sigma:  {config.observation_sigma:.6f}")
     print(f"Estimated damping:           {float(gamma_hat):.6f} +/- {float(standard_error):.6f} (approx. 1 SE)")
     print(f"Fit minus truth:             {float(gamma_hat - config.true_damping):+.6f}")
     print(f"Initial mean NLL:            {float(loss_history[0]):.6f}")
     print(f"Final mean NLL:              {float(loss_history[-1]):.6f}")
-    print(
-        f"Final absolute log-gradient: {float(jnp.abs(jax.grad(objective)(jnp.log(gamma_hat)))):.3e}"
-    )
+    print(f"Final absolute log-gradient: {float(jnp.abs(jax.grad(objective)(jnp.log(gamma_hat)))):.3e}")
 
     true_position = analytical_position(jnp.asarray(config.true_damping), times, config)
     fitted_position = simulated_position(gamma_hat, times, config)
@@ -193,14 +194,13 @@ def main() -> None:
     axes[0].plot(times, true_position, label="Analytical ground truth")
     axes[0].plot(times, fitted_position, "--", label="CPax numerical trajectory")
     axes[0].set(xlabel="Time", ylabel="Position", title="Damping-parameter recovery")
+    axes[0].grid()
     axes[0].legend()
 
     # The profile is obtained by actually re-solving CPax at each candidate
     # damping value; the shaded +/- 1 SE range comes from Fisher information.
     profile_gamma = jnp.linspace(gamma_hat - 5.0 * standard_error, gamma_hat + 5.0 * standard_error, 51)
-    profile_nll = jax.vmap(lambda gamma: negative_log_likelihood(gamma, times, observations, config))(
-        profile_gamma
-    )
+    profile_nll = jax.vmap(lambda gamma: negative_log_likelihood(gamma, times, observations, config))(profile_gamma)
     axes[1].plot(profile_gamma, profile_nll - jnp.min(profile_nll), label="Numerical NLL profile")
     axes[1].axvline(float(gamma_hat), linestyle="--", label="Fitted damping")
     axes[1].axvline(config.true_damping, linestyle=":", label="True damping")
@@ -211,6 +211,7 @@ def main() -> None:
         label="Fisher +/- 1 SE",
     )
     axes[1].set(xlabel="Damping gamma", ylabel="NLL - min(NLL)", title="Likelihood curvature")
+    axes[1].grid()
     axes[1].legend()
     fig.tight_layout()
     plt.show()
