@@ -58,8 +58,8 @@ coefficient from positions measured along a trajectory. A
 ``IVP``, ``cpax.solve`` and ``SaveAt.at`` generate candidate predictions
 at the measurement times. A JAX differentiable Gaussian negative
 log-likelihood compares those positions to seeded noisy observations.
-A short gradient-descent fit recovers the damping coefficient, and the
-local Hessian of the likelihood provides an approximate standard error.
+A short gradient-descent fit recovers the damping coefficient, and first-order trajectory sensitivities provide an approximate standard error
+through expected Fisher information.
 
 **This is a deliberately illustrative choice of model.** For a damped
 harmonic oscillator, the exact analytical solution is known. In an actual
@@ -81,12 +81,24 @@ negative log-likelihood up to a parameter-independent constant:
    \mathrm{NLL}(\gamma) = \frac{1}{2\sigma_{\mathrm{obs}}^2}
    \sum_i \left[q_{\mathrm{CPax}}(t_i;\gamma)-q_i^{\mathrm{obs}}\right]^2.
 
-Its curvature at the optimum estimates the standard error,
-``sigma_gamma = 1/sqrt(NLL''(gamma_hat))``, computed using two
-reverse-mode differentiation passes (``jax.grad(jax.grad(...))``).
-The default Diffrax adjoint does not support the forward-over-reverse
-transformation used by ``jax.hessian``. The estimate relies on a **local quadratic
-approximation** to the likelihood. This is an approximate conditional
+For independent Gaussian measurements with common, known standard
+deviation, the expected Fisher information is
+
+.. math::
+
+   \mathcal{I}(\gamma) =
+   \frac{1}{\sigma_{\mathrm{obs}}^2}
+   \sum_i \left[\frac{\partial q_{\mathrm{CPax}}(t_i;\gamma)}
+   {\partial\gamma}\right]^2.
+
+The example obtains the first-order trajectory sensitivity with
+``jax.jacrev`` and reports the approximate standard error
+``sigma_gamma = 1/sqrt(I(gamma_hat))``. This is the
+Gauss--Newton (expected-curvature) approximation, not the observed
+Hessian of the negative log-likelihood. It avoids second-order
+differentiation through Diffrax's default checkpointing adjoint, which
+does not generally support the required higher-order transformations.
+The estimate relies on a **local quadratic approximation** to the likelihood. This is an approximate conditional
 uncertainty, not a complete treatment of systematics, correlations,
 model misspecification or parameter identifiability. In particular,
 a single noisy realisation need not place the true value inside the
