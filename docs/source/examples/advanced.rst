@@ -58,8 +58,9 @@ coefficient from positions measured along a trajectory. A
 ``IVP``, ``cpax.solve`` and ``SaveAt.at`` generate candidate predictions
 at the measurement times. A JAX differentiable Gaussian negative
 log-likelihood compares those positions to seeded noisy observations.
-A short gradient-descent fit recovers the damping coefficient, and first-order trajectory sensitivities provide an approximate standard error
-through expected Fisher information.
+A short gradient-descent fit recovers the damping coefficient. First-order
+trajectory sensitivities provide an approximate standard error through
+expected Fisher information.
 
 **This is a deliberately illustrative choice of model.** For a damped
 harmonic oscillator, the exact analytical solution is known. In an actual
@@ -98,11 +99,17 @@ Gauss--Newton (expected-curvature) approximation, not the observed
 Hessian of the negative log-likelihood. It avoids second-order
 differentiation through Diffrax's default checkpointing adjoint, which
 does not generally support the required higher-order transformations.
-The estimate relies on a **local quadratic approximation** to the likelihood. This is an approximate conditional
-uncertainty, not a complete treatment of systematics, correlations,
-model misspecification or parameter identifiability. In particular,
-a single noisy realisation need not place the true value inside the
-reported approximate one-standard-error interval.
+The Fisher standard error is a local approximation based on expected
+information, rather than the exact curvature of this particular noisy
+dataset. The plot also shows the profile-likelihood threshold
+``Delta NLL = 0.5``: for one fitted parameter, Wilks' theorem gives
+``2 Delta NLL = 1`` for an approximate 68% confidence interval.
+The factor of two matters because the plotted quantity is **NLL**, not
+``-2 log L``. The Fisher band and profile-likelihood crossings need not
+coincide exactly because the likelihood is not perfectly quadratic and
+the observed and expected curvatures differ. Both are approximate,
+conditional on the measurement model; neither accounts for systematic
+or correlated errors.
 
 The example groups physical, measurement and solver settings in an immutable
 ``InferenceConfig`` instance, passed explicitly through the simulation and
