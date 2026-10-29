@@ -72,7 +72,7 @@ optimisation and sensitivity techniques can also be appropriate there.
 
 The data model is ``q_observed(t_i) = q_exact(t_i; gamma_true) + epsilon_i``,
 with independent zero-mean Gaussian errors of **known**, common standard
-deviation ``OBSERVATION_SIGMA``. The unknown damping is strictly positive
+deviation ``config.observation_sigma``. The unknown damping is strictly positive
 via ``gamma = exp(log_gamma)``. The scalar loss used for inference is the
 negative log-likelihood up to a parameter-independent constant:
 
@@ -103,6 +103,10 @@ uncertainty, not a complete treatment of systematics, correlations,
 model misspecification or parameter identifiability. In particular,
 a single noisy realisation need not place the true value inside the
 reported approximate one-standard-error interval.
+
+The example groups physical, measurement and solver settings in an immutable
+``InferenceConfig`` instance, passed explicitly through the simulation and
+inference functions. No module-level numerical configuration is required.
 
 The example uses an adaptive Tsit5 integration with explicit tolerances,
 81 equally spaced observation times over a fixed interval, and the JAX
