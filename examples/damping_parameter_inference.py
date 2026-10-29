@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import cpax
 from cpax.mechanics import ForcedNewtonianSystem, PhaseSpaceState
 
+
 @dataclass(frozen=True)
 class InferenceConfig:
     """Physical, measurement and solver settings for this example.
