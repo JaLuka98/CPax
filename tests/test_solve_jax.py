@@ -158,7 +158,6 @@ def test_auto_selection_supports_jit_vmap_and_grad():
     np.testing.assert_allclose(jax.grad(compiled)(rate), -2 * np.exp(-0.5), rtol=5e-4)
 
 
-
 def test_float32_ivp_jit_vmap_and_grad_with_explicit_dtype():
     """Keep the default-precision differentiable integration path covered."""
     with jax.enable_x64(False):
