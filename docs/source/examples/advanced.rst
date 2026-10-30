@@ -115,8 +115,8 @@ The example groups physical, measurement and solver settings in an immutable
 ``InferenceConfig`` instance, passed explicitly through the simulation and
 inference functions. No module-level numerical configuration is required.
 
-The example uses an adaptive Tsit5 integration with explicit tolerances,
-81 equally spaced observation times over a fixed interval, and the JAX
+The example uses an adaptive Tsit5 integration with float32-oriented tolerances
+(``rtol=1e-5``, ``atol=1e-7``), 81 equally spaced observation times, and the JAX
 default floating-point precision (typically float32). Output sample
 times are independent of the adaptive integration mesh: values at those
 times can use solver interpolation. Tolerances control estimated local

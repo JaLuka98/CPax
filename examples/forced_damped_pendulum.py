@@ -38,7 +38,7 @@ def main() -> None:
     # Angular momentum p = I * angular velocity (not angular velocity itself).
     y0 = PhaseSpaceState(q=0.5, p=0.0)
     problem = cpax.IVP(model, y0, (0.0, 50.0))
-    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(1001), rtol=1e-7, atol=1e-9)
+    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(1001), rtol=1e-5, atol=1e-7)
     assert bool(solution.is_success)
 
     energy = jax.vmap(model.mechanical_energy)(solution.ys)

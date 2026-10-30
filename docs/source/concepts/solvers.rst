@@ -10,13 +10,30 @@ conservation laws.
 Selecting an algorithm
 ----------------------
 
-Pass a Diffrax solver explicitly when the model demands a particular method:
+Pass a Diffrax solver explicitly when the model demands a particular method.
+The following stringent tolerances require particular care: enable x64
+before constructing the problem, model arrays or initial conditions.
 
 .. code-block:: python
 
    import cpax
    import diffrax
+   import jax
+   import jax.numpy as jnp
+   from cpax.dynamics import VectorFieldSystem
 
+   # Enable float64 before creating model or initial-condition arrays.
+   jax.config.update("jax_enable_x64", True)
+
+   def decay(t, y, args):
+       del t, args
+       return -y
+
+   problem = cpax.IVP(
+       system=VectorFieldSystem(decay),
+       y0=jnp.asarray(1.0, dtype=jnp.float64),
+       t_span=(0.0, 10.0),
+   )
    solution = cpax.solve(
        problem,
        solver=diffrax.Dopri8(),
@@ -46,7 +63,11 @@ of order ``atol + rtol * abs(y)``. These tolerances constrain *estimated
 local error*, not the global trajectory error. With components measured
 in different units or spanning different scales, a single absolute
 tolerance deserves careful consideration. Check convergence by comparing
-solutions at progressively tighter tolerances.
+solutions at progressively tighter tolerances. Solver tolerances are not
+assertion thresholds: tests should compare trajectories, sensitivities and
+invariants with independent, physically justified error budgets. Tight
+float32 tolerances do not provide float64 accuracy, and some accelerators
+execute float64 substantially more slowly than float32.
 
 Output sampling is independent of integration. For example,
 ``SaveAt.linspace(501)`` requests 501 regularly spaced values, including
@@ -84,9 +105,10 @@ the end of the interval reports failure.
 Precision and conservation
 --------------------------
 
-JAX commonly defaults to 32-bit floating-point arithmetic. For longer
-integrations or tight error tolerances, enable 64-bit arithmetic *before*
-constructing model arrays:
+JAX defaults to 32-bit floating-point arithmetic unless x64 is enabled.
+For long integrations, widely varying state scales or tight tolerances,
+64-bit arithmetic may be appropriate. Enable it *before* constructing
+model and initial-condition arrays:
 
 .. code-block:: python
 
