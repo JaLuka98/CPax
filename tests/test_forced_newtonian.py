@@ -14,7 +14,7 @@ from cpax.solvers import VelocityVerlet
 
 def solve(system, y0=None, end=2.0, samples=61):
     problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0) if y0 is None else y0, (0.0, end))
-    return cpax.solve(problem, saveat=cpax.SaveAt.linspace(samples), rtol=1e-7, atol=1e-9)
+    return cpax.solve(problem, saveat=cpax.SaveAt.linspace(samples), rtol=1e-5, atol=1e-7)
 
 
 def test_conservative_limit_matches_newtonian():
@@ -165,7 +165,7 @@ def test_jit_vmap_grad_and_equinox_force_parameters():
             params=gamma,
         )
         problem = cpax.IVP(model, PhaseSpaceState(0.0, 1.0), (0.0, 1.0))
-        return cpax.solve(problem, solver=diffrax.Tsit5(), rtol=1e-7, atol=1e-9).ys.q[-1]
+        return cpax.solve(problem, solver=diffrax.Tsit5(), rtol=1e-5, atol=1e-7).ys.q[-1]
 
     gamma = jnp.array(0.4)
     exact = (1 - jnp.exp(-gamma)) / gamma

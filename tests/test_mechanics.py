@@ -34,8 +34,8 @@ def integrate(system, initial=None, *, duration=1.0, samples=11):
         problem,
         solver=diffrax.Tsit5(),
         saveat=cpax.SaveAt.linspace(samples),
-        rtol=1e-7,
-        atol=1e-9,
+        rtol=1e-5,
+        atol=1e-7,
     )
 
 
@@ -164,7 +164,7 @@ def test_jit_vmap_and_differentiation_through_trajectory():
     def final_position(k):
         system = NewtonianSystem(potential=oscillator, mass=1.0, params={"k": k})
         problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 1.0))
-        return cpax.solve(problem, solver=diffrax.Tsit5(), rtol=1e-7, atol=1e-9).ys.q[-1]
+        return cpax.solve(problem, solver=diffrax.Tsit5(), rtol=1e-5, atol=1e-7).ys.q[-1]
 
     k = jnp.array(2.0)
     np.testing.assert_allclose(jax.jit(final_position)(k), jnp.cos(jnp.sqrt(k)), rtol=2e-4)
@@ -178,7 +178,7 @@ def test_differentiate_mass_and_initial_coordinate():
     def final_position(m, q0):
         system = NewtonianSystem(potential=lambda q: 0.5 * q**2, mass=m)
         problem = cpax.IVP(system, PhaseSpaceState(q0, 0.0), (0.0, 1.0))
-        return cpax.solve(problem, solver=diffrax.Tsit5(), rtol=1e-7, atol=1e-9).ys.q[-1]
+        return cpax.solve(problem, solver=diffrax.Tsit5(), rtol=1e-5, atol=1e-7).ys.q[-1]
 
     m = jnp.array(2.0)
     np.testing.assert_allclose(
