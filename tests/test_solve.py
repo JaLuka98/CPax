@@ -48,10 +48,12 @@ def test_decay_matches_analytical_trajectory(y0, rate):
         problem,
         solver=diffrax.Tsit5(),
         saveat=cpax.SaveAt.linspace(41),
-        rtol=1e-6,
-        atol=1e-8,
+        rtol=1e-5,
+        atol=1e-7,
     )
 
+    # This reference integration deliberately covers the float32 path.
+    assert solution.ys.dtype == jnp.float32
     expected = y0 * np.exp(-rate * np.asarray(solution.ts))
     np.testing.assert_allclose(solution.ys, expected, rtol=3e-5, atol=3e-6)
     assert bool(solution.is_success)
@@ -63,8 +65,8 @@ def test_oscillator_matches_analytical_position_and_momentum():
         problem,
         solver=diffrax.Tsit5(),
         saveat=cpax.SaveAt.linspace(121),
-        rtol=1e-6,
-        atol=1e-8,
+        rtol=1e-5,
+        atol=1e-7,
     )
     q, p = solution.ys
     omega, q0, p0 = 1.5, 1.0, 0.25
@@ -80,6 +82,8 @@ def test_oscillator_matches_analytical_position_and_momentum():
 def test_native_diffrax_reference_uses_identical_problem_and_numerical_options():
     problem = _decay_problem(y0=2.0, rate=0.7)
     save_times = jnp.linspace(*problem.t_span, 31)
+    # Contract test, not a float32 convergence test: both integrations use
+    # precisely the same nondefault controller to compare CPax with Diffrax.
     controller = diffrax.PIDController(rtol=1e-6, atol=1e-8)
     solver = diffrax.Tsit5()
 
@@ -242,8 +246,8 @@ def test_hamiltonian_energy_drift_is_small_over_finite_interval():
         _oscillator_problem(omega=omega, t_span=(0.0, 10.0)),
         solver=diffrax.Tsit5(),
         saveat=cpax.SaveAt.linspace(201),
-        rtol=1e-6,
-        atol=1e-8,
+        rtol=1e-5,
+        atol=1e-7,
     )
     q, p = solution.ys
     energy = 0.5 * (p**2 + (omega * q) ** 2)
@@ -297,6 +301,8 @@ def test_float64_decay_preserves_precision_and_matches_analytical_solution():
 
 def test_auto_solver_forms_match_explicit_tsit5():
     problem = _decay_problem()
+    # These deliberately nondefault float32 settings test exact option
+    # forwarding across solver-selection paths, not absolute accuracy.
     options = {"saveat": cpax.SaveAt.linspace(17), "rtol": 1e-6, "atol": 1e-8}
     automatic = cpax.solve(problem, **options)
     named = cpax.solve(problem, solver="auto", **options)
