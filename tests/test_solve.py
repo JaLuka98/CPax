@@ -82,6 +82,8 @@ def test_oscillator_matches_analytical_position_and_momentum():
 def test_native_diffrax_reference_uses_identical_problem_and_numerical_options():
     problem = _decay_problem(y0=2.0, rate=0.7)
     save_times = jnp.linspace(*problem.t_span, 31)
+    # Contract test, not a float32 convergence test: both integrations use
+    # precisely the same nondefault controller to compare CPax with Diffrax.
     controller = diffrax.PIDController(rtol=1e-6, atol=1e-8)
     solver = diffrax.Tsit5()
 
@@ -299,6 +301,8 @@ def test_float64_decay_preserves_precision_and_matches_analytical_solution():
 
 def test_auto_solver_forms_match_explicit_tsit5():
     problem = _decay_problem()
+    # These deliberately nondefault float32 settings test exact option
+    # forwarding across solver-selection paths, not absolute accuracy.
     options = {"saveat": cpax.SaveAt.linspace(17), "rtol": 1e-6, "atol": 1e-8}
     automatic = cpax.solve(problem, **options)
     named = cpax.solve(problem, solver="auto", **options)

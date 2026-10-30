@@ -16,16 +16,24 @@ before constructing the problem, model arrays or initial conditions.
 
 .. code-block:: python
 
-   import jax
-   import jax.numpy as jnp
-
-   # Enable x64 before constructing JAX values used by this example.
-   jax.config.update("jax_enable_x64", True)
-   # Construct `problem` here using float64 arrays for its state and parameters.
-
    import cpax
    import diffrax
+   import jax
+   import jax.numpy as jnp
+   from cpax.dynamics import VectorFieldSystem
 
+   # Enable float64 before creating model or initial-condition arrays.
+   jax.config.update("jax_enable_x64", True)
+
+   def decay(t, y, args):
+       del t, args
+       return -y
+
+   problem = cpax.IVP(
+       system=VectorFieldSystem(decay),
+       y0=jnp.asarray(1.0, dtype=jnp.float64),
+       t_span=(0.0, 10.0),
+   )
    solution = cpax.solve(
        problem,
        solver=diffrax.Dopri8(),
