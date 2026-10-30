@@ -61,7 +61,6 @@ def test_short_gravitational_ivp_conserves_momentum():
     np.testing.assert_allclose(energy, energy[0], rtol=1e-3, atol=1e-5)
 
 
-
 def test_asymmetric_gravitational_ivp_conserves_momentum_float32():
     """Check momentum conservation without exact two-body symmetry."""
     with jax.enable_x64(False):
