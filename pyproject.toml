@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "CPax"
-version = "2026.10.0"
+version = "2026.10.1"
 description = "CPax: A JAX-based computational physics library."
 requires-python = ">=3.12"
 authors = [
