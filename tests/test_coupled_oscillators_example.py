@@ -41,6 +41,7 @@ def test_coupled_normal_modes_and_superposition_float64():
 def test_coupled_example_jax_transforms_float32():
     simulate = _functions()["simulate"]
     with jax.enable_x64(False):
+
         def last_position(coupling):
             _, sol = simulate(q0=(1.0, -1.0), coupling=coupling, t_end=1.0, steps=100)
             return sol.ys.q[-1, 0]
@@ -49,8 +50,6 @@ def test_coupled_example_jax_transforms_float32():
         omega = jnp.sqrt(1.0 + 2.0 * coupling)
         np.testing.assert_allclose(jax.jit(last_position)(coupling), jnp.cos(omega), atol=4e-4)
         values = jnp.array([0.2, 0.6, 1.0], dtype=jnp.float32)
-        np.testing.assert_allclose(
-            jax.vmap(last_position)(values), jnp.cos(jnp.sqrt(1.0 + 2.0 * values)), atol=4e-4
-        )
+        np.testing.assert_allclose(jax.vmap(last_position)(values), jnp.cos(jnp.sqrt(1.0 + 2.0 * values)), atol=4e-4)
         expected_derivative = -jnp.sin(omega) / omega
         np.testing.assert_allclose(jax.grad(last_position)(coupling), expected_derivative, atol=5e-4)

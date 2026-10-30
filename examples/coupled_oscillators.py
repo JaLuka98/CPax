@@ -16,10 +16,7 @@ from cpax.solvers import VelocityVerlet
 
 def potential(q: jax.Array, params: dict[str, float]) -> jax.Array:
     """Quadratic potential with a coupling between the two displacements."""
-    return (
-        0.5 * params["spring"] * jnp.sum(q**2)
-        + 0.5 * params["coupling"] * (q[0] - q[1]) ** 2
-    )
+    return 0.5 * params["spring"] * jnp.sum(q**2) + 0.5 * params["coupling"] * (q[0] - q[1]) ** 2
 
 
 def simulate(

@@ -18,9 +18,7 @@ def potential(theta: jax.Array, params: dict[str, float]) -> jax.Array:
     return params["mass"] * params["g"] * params["length"] * (1.0 - jnp.cos(theta))
 
 
-def applied_torque(
-    t: jax.Array, theta: jax.Array, angular_velocity: jax.Array, params: dict[str, float]
-) -> jax.Array:
+def applied_torque(t: jax.Array, theta: jax.Array, angular_velocity: jax.Array, params: dict[str, float]) -> jax.Array:
     """Viscous torque plus a periodic external driving torque, in N m."""
     del theta
     return -params["damping"] * angular_velocity + params["drive"] * jnp.cos(params["frequency"] * t)

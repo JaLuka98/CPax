@@ -1,5 +1,5 @@
 Classical mechanics examples
-===========================
+============================
 
 These executable examples use physical potentials, generalised forces and
 canonical momenta with the public CPax workflow. They do not require a
@@ -76,7 +76,7 @@ should be interpreted accordingly.
    :language: python
 
 Driven and damped pendulum
--------------------------
+--------------------------
 
 For the physical pendulum, `ForcedNewtonianSystem` receives the same
 gravitational potential as the conservative example, plus viscous damping

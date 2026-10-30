@@ -20,9 +20,7 @@ def _load(name):
 def test_duffing_conservative_limit_matches_newtonian_float32():
     with jax.enable_x64(False):
         duffing = _load("forced_duffing_oscillator.py")
-        system, forced = duffing["simulate"](
-            damping=0.0, drive=0.0, q0=-1.0, velocity0=0.2, t_end=5.0, samples=251
-        )
+        system, forced = duffing["simulate"](damping=0.0, drive=0.0, q0=-1.0, velocity0=0.2, t_end=5.0, samples=251)
         conservative = NewtonianSystem(
             mass=1.0,
             potential=lambda q: -0.5 * q**2 + 0.25 * q**4,
@@ -74,7 +72,7 @@ def test_duffing_damping_and_driven_energy_balance_float64():
 def test_driven_duffing_reference_refinement():
     simulate = _load("forced_duffing_oscillator.py")["simulate"]
     with jax.enable_x64(True):
-        params = dict(damping=0.3, drive=0.5, frequency=1.7, velocity0=0.2, t_end=6.0, samples=151)
+        params = {"damping": 0.3, "drive": 0.5, "frequency": 1.7, "velocity0": 0.2, "t_end": 6.0, "samples": 151}
         _, ordinary = simulate(**params, rtol=1e-6, atol=1e-8)
         _, refined = simulate(**params, rtol=1e-10, atol=1e-12)
         assert bool(ordinary.is_success) and bool(refined.is_success)
