@@ -94,6 +94,14 @@ def test_asymmetric_gravitational_ivp_conserves_momentum_float32():
         )
 
 
-def test_import_all_simple_examples():
-    for filename in ("harmonic_oscillator.py", "duffing_oscillator.py", "lorenz.py"):
+def test_import_all_simple_and_mechanics_examples():
+    for filename in (
+        "harmonic_oscillator.py",
+        "duffing_oscillator.py",
+        "lorenz.py",
+        "simple_pendulum.py",
+        "coupled_oscillators.py",
+        "forced_duffing_oscillator.py",
+        "forced_damped_pendulum.py",
+    ):
         assert callable(runpy.run_path(str(ROOT / "examples" / filename))["main"])
