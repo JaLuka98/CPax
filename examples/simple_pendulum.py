@@ -52,7 +52,7 @@ def simulate(
 def main() -> None:
     """Compare linear and nonlinear motion and inspect numerical energy."""
     small_angle, large_angle = 0.05, 1.0
-    small_system, small = simulate(small_angle)
+    _small_system, small = simulate(small_angle)
     large_system, large = simulate(large_angle)
     if not bool(small.is_success) or not bool(large.is_success):
         raise RuntimeError("Pendulum integration failed.")
