@@ -2,8 +2,10 @@ Mechanics
 =========
 
 The ``cpax.mechanics`` package provides ``NewtonianSystem``,
-``HamiltonianSystem``, canonical ``PhaseSpaceState``, and an
-unsoftened Newtonian gravitational potential.
+``ForcedNewtonianSystem``, ``HamiltonianSystem``, canonical
+``PhaseSpaceState``, and an unsoftened Newtonian gravitational potential.
+For runnable pendulum, coupled-oscillator and Duffing demonstrations, see
+:doc:`../examples/mechanics`.
 
 Newtonian potentials and parameters
 -----------------------------------

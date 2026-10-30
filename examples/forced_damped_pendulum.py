@@ -1,4 +1,9 @@
-"""Driven, damped nonlinear pendulum with generalised torque."""
+"""Driven, damped nonlinear pendulum with generalised torque.
+
+The coordinate theta is angular displacement in radians and the canonical
+momentum is p_theta = I * angular_velocity, with I = mass * length**2.
+All physical constants below are in SI units.
+"""
 
 import jax
 import jax.numpy as jnp
@@ -8,38 +13,56 @@ import cpax
 from cpax.mechanics import ForcedNewtonianSystem, PhaseSpaceState
 
 
-def potential(theta, params):
+def potential(theta: jax.Array, params: dict[str, float]) -> jax.Array:
     """Gravitational potential in joules, for theta measured in radians."""
     return params["mass"] * params["g"] * params["length"] * (1.0 - jnp.cos(theta))
 
 
-def applied_torque(t, theta, angular_velocity, params):
+def applied_torque(t: jax.Array, theta: jax.Array, angular_velocity: jax.Array, params: dict[str, float]) -> jax.Array:
     """Viscous torque plus a periodic external driving torque, in N m."""
     del theta
     return -params["damping"] * angular_velocity + params["drive"] * jnp.cos(params["frequency"] * t)
 
 
-def main() -> None:
+def simulate(
+    *,
+    mass: float = 1.0,
+    length: float = 1.0,
+    gravity: float = 9.81,
+    damping: float = 0.35,
+    drive: float = 1.2,
+    frequency: float = 3.0,
+    theta0: float = 0.5,
+    angular_velocity0: float = 0.0,
+    t_end: float = 50.0,
+    samples: int = 1001,
+):
+    """Return the force-driven pendulum system and its adaptive solution."""
     params = {
-        "mass": 1.0,  # kg
-        "length": 1.0,  # m
-        "g": 9.81,  # m/s^2
-        "damping": 0.35,  # kg m^2/s
-        "drive": 1.2,  # N m
-        "frequency": 3.0,  # rad/s
+        "mass": mass,  # kg
+        "length": length,  # m
+        "g": gravity,  # m/s**2
+        "damping": damping,  # kg m**2/s
+        "drive": drive,  # N m
+        "frequency": frequency,  # rad/s
     }
-    inertia = params["mass"] * params["length"] ** 2
+    inertia = mass * length**2
     model = ForcedNewtonianSystem(
         mass=inertia,
         potential=potential,
         applied_force=applied_torque,
         params=params,
     )
-    # Angular momentum p = I * angular velocity (not angular velocity itself).
-    y0 = PhaseSpaceState(q=0.5, p=0.0)
-    problem = cpax.IVP(model, y0, (0.0, 50.0))
-    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(1001), rtol=1e-5, atol=1e-7)
-    assert bool(solution.is_success)
+    initial = PhaseSpaceState(q=theta0, p=inertia * angular_velocity0)
+    problem = cpax.IVP(model, initial, (0.0, t_end))
+    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(samples), rtol=1e-5, atol=1e-7)
+    return model, solution
+
+
+def main() -> None:
+    model, solution = simulate()
+    if not bool(solution.is_success):
+        raise RuntimeError("Driven pendulum integration failed.")
 
     energy = jax.vmap(model.mechanical_energy)(solution.ys)
     power = jax.vmap(model.applied_power)(solution.ts, solution.ys)

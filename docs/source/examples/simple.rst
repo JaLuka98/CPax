@@ -37,16 +37,3 @@ The resulting trajectories show the characteristic butterfly-shaped attractor.
 .. literalinclude:: ../../../examples/lorenz.py
    :language: python
 
-Driven and damped nonlinear pendulum
-------------------------------------
-
-The pendulum uses angular coordinate ``theta``, angular momentum
-``p = I * omega``, gravitational potential, viscous torque, and periodic
-external driving torque. In contrast to the conservative examples,
-its mechanical energy need not remain constant.
-In this example, a frequency of 3 rad/s is used for the driving torque, which
-is close to the natural frequency of the pendulum and leads to a resonance effect.
-After the initial transient has decayed, the external torque sustains a periodic oscillation. Without driving, damping would eventually bring the pendulum to rest.
-
-.. literalinclude:: ../../../examples/forced_damped_pendulum.py
-   :language: python
