@@ -28,8 +28,8 @@ def _solve(problem, saveat=None):
         problem,
         solver=diffrax.Tsit5(),
         saveat=saveat,
-        rtol=1e-6,
-        atol=1e-8,
+        rtol=1e-5,
+        atol=1e-7,
     )
 
 

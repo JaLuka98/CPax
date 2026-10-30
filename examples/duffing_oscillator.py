@@ -15,7 +15,7 @@ def simulate(q0: float, p0: float, *, t1: float = 30.0, samples: int = 1000):
     """Integrate one trajectory in the conservative double-well potential."""
     system = NewtonianSystem(potential=potential, mass=1.0)
     problem = cpax.IVP(system, PhaseSpaceState(q=q0, p=p0), (0.0, t1))
-    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(samples), rtol=1e-7, atol=1e-9)
+    solution = cpax.solve(problem, saveat=cpax.SaveAt.linspace(samples), rtol=1e-5, atol=1e-7)
     return system, solution
 
 
