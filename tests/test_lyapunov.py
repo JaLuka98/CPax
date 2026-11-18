@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 import cpax
-from cpax.analysis import LyapunovResult, lyapunov_spectrum
+from cpax.analysis import LyapunovQuality, LyapunovResult, lyapunov_spectrum
 from cpax.dynamics import VectorFieldSystem
 from cpax.mechanics import ForcedNewtonianSystem, PhaseSpaceState
 from cpax.results import SolutionStatus
@@ -53,7 +53,31 @@ def test_full_diagonal_spectrum_and_convergence_history():
     np.testing.assert_allclose(result.times, np.linspace(0.5, 8.0, 16), rtol=0, atol=1e-12)
     assert result.metadata["state_dimension"] == 2
     assert result.metadata["num_segments"] == 16
+    assert float(result.metadata["qr_interval"]) == pytest.approx(0.5)
     assert int(result.stats["num_accepted_steps"]) > 0
+    assert int(result.diagnostics.num_valid_segments) == 16
+    assert int(result.diagnostics.quality) == LyapunovQuality.PASS
+    assert bool(result.diagnostics.is_healthy)
+    np.testing.assert_allclose(result.diagnostics.qr_log_diagonal_spans, 0.5, rtol=2e-7, atol=2e-8)
+    np.testing.assert_allclose(result.diagnostics.liouville_residuals, 0.0, atol=2e-7)
+    assert float(result.diagnostics.liouville_rate_residual) == pytest.approx(0.0, abs=2e-8)
+    report = result.report()
+    assert "Lyapunov diagnostics: PASS" in report
+    assert "Liouville residual rate" in report
+
+
+def test_qr_conditioning_proxy_warns_before_tangent_precision_is_exhausted():
+    result = lyapunov_spectrum(
+        _diagonal_problem((-10.0, 10.0), t_span=(0.0, 1.0)),
+        num_segments=1,
+        rtol=1e-7,
+        atol=1e-9,
+    )
+
+    assert bool(result.is_success)
+    assert int(result.diagnostics.quality) == LyapunovQuality.WARNING
+    assert float(result.diagnostics.qr_log_diagonal_spans[0]) > float(result.diagnostics.qr_warning_threshold)
+    assert "Lyapunov diagnostics: WARNING" in result.report()
 
 
 def test_nested_pytree_state_and_ivp_args_are_flattened_correctly():
@@ -186,6 +210,9 @@ def test_nonraising_failure_marks_invalid_spectrum_and_preserves_diagnostics():
     assert bool(jnp.all(jnp.isnan(result.exponents)))
     assert bool(jnp.all(jnp.isnan(result.running_exponents)))
     assert int(result.stats["num_steps"]) == 1
+    assert int(result.diagnostics.num_valid_segments) == 0
+    assert int(result.diagnostics.quality) == LyapunovQuality.INVALID
+    assert "spectrum is not usable" in result.report()
 
 
 def test_raising_failure_matches_solve_contract():

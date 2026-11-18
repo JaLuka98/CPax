@@ -41,6 +41,50 @@ solver tolerances and, where appropriate, enable x64 before constructing all
 JAX arrays. A spectrum is an analysis result, not a proof that the trajectory
 or numerical integration has converged.
 
+Diagnostics and reports
+-----------------------
+
+``result.is_success`` reports whether every Diffrax solve completed. It does
+not certify the numerical quality of the tangent calculation: a tangent basis
+may lose its contracting directions between two QR boundaries even when the
+state solve succeeds. CPax therefore provides JAX-compatible diagnostics and
+a short, concrete-result report:
+
+.. code-block:: python
+
+   diagnostics = result.diagnostics
+   print(result.report())
+   # Lyapunov diagnostics: PASS.
+   # Completed QR segments: 120/120.
+   # ...
+
+``diagnostics.quality`` is a ``LyapunovQuality`` code. ``PASS`` means no
+configured numerical-health threshold was crossed; it does not establish that
+the finite-time average has converged. ``WARNING`` asks for a shorter QR
+interval or tighter solver tolerances. ``INVALID`` means a segment failed,
+the tangent data became non-finite, or the tangent-volume consistency check
+was grossly violated.
+
+``diagnostics.qr_log_diagonal_spans`` records the spread of the log QR
+diagonal factors in every interval. It is a cheap conditioning proxy, with an
+advisory threshold derived from the active floating-point dtype. Its maximum
+should remain comfortably below ``diagnostics.precision_budget``; in
+particular, do not increase the total interval while leaving
+``num_segments`` fixed.
+
+For every smooth ODE, Liouville's identity says that the QR log-volume growth
+equals the time integral of the Jacobian trace. CPax records their cumulative
+difference in ``diagnostics.liouville_residuals`` and its final rate in
+``diagnostics.liouville_rate_residual``. A large residual is a strong warning
+that the tangent calculation is not trustworthy. For the standard Lorenz
+parameters this also checks that the spectrum sum approaches
+``-(10 + 1 + 8 / 3)``.
+
+Finally, ``diagnostics.tail_drift`` gives the absolute difference between the
+final spectrum and the estimate halfway through the valid post-transient
+history. It is a transparent convergence aid rather than a statistical error
+bar, since consecutive chaotic samples are correlated.
+
 Parameters
 ----------
 

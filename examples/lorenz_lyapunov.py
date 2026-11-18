@@ -24,8 +24,7 @@ def main() -> None:
         max_steps=20000,
     )
     assert bool(result.is_success)
-    print(result)
-
+    print(result.report())
     print("Lyapunov spectrum:", result.exponents)
     fig, ax = plt.subplots()
     for index in range(result.exponents.size):

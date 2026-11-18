@@ -16,7 +16,7 @@ from cpax.solvers._auto import Auto
 from cpax.solvers._configuration import configure_solver, resolve_solver
 from cpax.solvers._velocity_verlet import VelocityVerlet
 
-from ._result import LyapunovResult
+from ._result import LyapunovDiagnostics, LyapunovQuality, LyapunovResult
 
 _STAT_KEYS = ("num_steps", "num_accepted_steps", "num_rejected_steps")
 type _TimeLike = float | int | jax.Array | np.ndarray
@@ -145,11 +145,13 @@ def lyapunov_spectrum(
     if jacobian_shape.shape != (dimension, dimension):
         raise ValueError("The vector-field Jacobian must have shape (state_dimension, state_dimension).")
 
-    def tangent_vector_field(t: _TimeLike, augmented_state: tuple[Any, jax.Array], args: Any) -> tuple[Any, jax.Array]:
-        state, tangent_basis = augmented_state
+    def tangent_vector_field(
+        t: _TimeLike, augmented_state: tuple[Any, jax.Array, jax.Array], args: Any
+    ) -> tuple[Any, jax.Array, jax.Array]:
+        state, tangent_basis, _ = augmented_state
         flat_state, _ = ravel_pytree(state)
         jacobian = jax.jacfwd(lambda coordinates: flat_vector_field(t, coordinates, args))(flat_state)
-        return base_vector_field(t, state, args), jacobian @ tangent_basis
+        return base_vector_field(t, state, args), jacobian @ tangent_basis, jnp.trace(jacobian)
 
     base_term = diffrax.ODETerm(base_vector_field)
     tangent_term = diffrax.ODETerm(tangent_vector_field)
@@ -176,7 +178,7 @@ def lyapunov_spectrum(
             t0=start,
             t1=end,
             dt0=dt0,
-            y0=(state, tangent_basis),
+            y0=(state, tangent_basis, jnp.asarray(0.0, dtype=tangent_basis.dtype)),
             args=problem.args,
             saveat=diffrax.SaveAt(t1=True),
             stepsize_controller=controller,
@@ -208,49 +210,125 @@ def lyapunov_spectrum(
     initial_basis = jnp.eye(dimension, dtype=tangent_dtype)
     initial_logs = jnp.zeros(dimension, dtype=tangent_dtype)
     nan_spectrum = jnp.full(dimension, jnp.nan, dtype=tangent_dtype)
+    nan_scalar = jnp.asarray(jnp.nan, dtype=tangent_dtype)
+    precision_budget = jnp.asarray(-np.log(np.finfo(np.dtype(tangent_dtype)).eps), dtype=tangent_dtype)
+    qr_warning_threshold = precision_budget / 2
 
     def segment_body(
-        carry: tuple[Any, jax.Array, jax.Array, jax.Array], index: jax.Array
-    ) -> tuple[tuple[Any, jax.Array, jax.Array, jax.Array], tuple[jax.Array, jax.Array]]:
-        state, tangent_basis, logarithmic_stretches, active = carry
+        carry: tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array], index: jax.Array
+    ) -> tuple[tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array], tuple[jax.Array, ...]]:
+        state, tangent_basis, logarithmic_stretches, divergence_integral, active = carry
         segment_start = analysis_start + index * segment_duration
         segment_end = segment_start + segment_duration
         elapsed = (index + 1) * segment_duration
 
-        def skipped(_: None) -> tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
-            return state, tangent_basis, logarithmic_stretches, jnp.asarray(False), nan_spectrum, stats_zeros
+        def skipped(
+            _: None,
+        ) -> tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
+            return (
+                state,
+                tangent_basis,
+                logarithmic_stretches,
+                divergence_integral,
+                jnp.asarray(False),
+                nan_spectrum,
+                stats_zeros,
+                nan_scalar,
+                nan_scalar,
+            )
 
-        def integrate(_: None) -> tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
+        def integrate(
+            _: None,
+        ) -> tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
             solution = solve_tangent(segment_start, segment_end, state, tangent_basis)
             segment_success = solution.result == diffrax.RESULTS.successful
             segment_stats = _stats_vector(solution)
 
-            def accepted(_: None) -> tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
-                next_state, propagated_basis = _final_state(solution.ys)
+            def accepted(
+                _: None,
+            ) -> tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
+                next_state, propagated_basis, segment_divergence = _final_state(solution.ys)
                 orthogonal_basis, upper = jnp.linalg.qr(propagated_basis)
                 diagonal = jnp.diag(upper)
                 signs = jnp.where(diagonal < 0, -jnp.ones_like(diagonal), jnp.ones_like(diagonal))
                 next_basis = orthogonal_basis * signs[jnp.newaxis, :]
-                next_stretches = logarithmic_stretches + jnp.log(diagonal * signs)
+                log_diagonal = jnp.log(diagonal * signs)
+                next_stretches = logarithmic_stretches + log_diagonal
+                next_divergence = divergence_integral + segment_divergence
                 spectrum = jnp.flip(jnp.sort(next_stretches / elapsed))
-                return next_state, next_basis, next_stretches, jnp.asarray(True), spectrum, segment_stats
+                qr_span = jnp.max(log_diagonal) - jnp.min(log_diagonal)
+                liouville_residual = jnp.sum(next_stretches) - next_divergence
+                return (
+                    next_state,
+                    next_basis,
+                    next_stretches,
+                    next_divergence,
+                    jnp.asarray(True),
+                    spectrum,
+                    segment_stats,
+                    qr_span,
+                    liouville_residual,
+                )
 
-            def failed(_: None) -> tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
-                return state, tangent_basis, logarithmic_stretches, jnp.asarray(False), nan_spectrum, segment_stats
+            def failed(
+                _: None,
+            ) -> tuple[Any, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
+                return (
+                    state,
+                    tangent_basis,
+                    logarithmic_stretches,
+                    divergence_integral,
+                    jnp.asarray(False),
+                    nan_spectrum,
+                    segment_stats,
+                    nan_scalar,
+                    nan_scalar,
+                )
 
             return jax.lax.cond(segment_success, accepted, failed, operand=None)
 
-        next_state, next_basis, next_stretches, next_active, spectrum, segment_stats = jax.lax.cond(
+        (
+            next_state,
+            next_basis,
+            next_stretches,
+            next_divergence,
+            next_active,
+            spectrum,
+            segment_stats,
+            qr_span,
+            liouville_residual,
+        ) = jax.lax.cond(
             active,
             integrate,
             skipped,
             operand=None,
         )
-        return (next_state, next_basis, next_stretches, next_active), (spectrum, segment_stats)
+        return (
+            next_state,
+            next_basis,
+            next_stretches,
+            next_divergence,
+            next_active,
+        ), (spectrum, segment_stats, qr_span, liouville_residual, next_active)
 
-    (_, _, _, final_active), (running_exponents, segment_stats) = jax.lax.scan(
+    (
+        (_, _, _, _, final_active),
+        (
+            running_exponents,
+            segment_stats,
+            qr_log_diagonal_spans,
+            liouville_residuals,
+            segment_valid,
+        ),
+    ) = jax.lax.scan(
         segment_body,
-        (state_after_transient, initial_basis, initial_logs, transient_success),
+        (
+            state_after_transient,
+            initial_basis,
+            initial_logs,
+            jnp.asarray(0.0, dtype=tangent_dtype),
+            transient_success,
+        ),
         jnp.arange(segment_count),
     )
     exponents = jnp.where(final_active, running_exponents[-1], nan_spectrum)
@@ -260,12 +338,60 @@ def lyapunov_spectrum(
         jnp.asarray(int(SolutionStatus.SUCCESS), dtype=jnp.int32),
         jnp.asarray(int(SolutionStatus.FAILED), dtype=jnp.int32),
     )
+    num_valid_segments = jnp.sum(segment_valid, dtype=jnp.int32)
+    last_valid_index = jnp.maximum(num_valid_segments - 1, 0)
+    halfway_index = jnp.maximum(num_valid_segments // 2 - 1, 0)
+    last_valid_spectrum = running_exponents[last_valid_index]
+    tail_drift = jnp.where(
+        num_valid_segments > 1,
+        jnp.abs(last_valid_spectrum - running_exponents[halfway_index]),
+        jnp.full(dimension, jnp.nan, dtype=tangent_dtype),
+    )
+    liouville_rate_residual = jnp.where(
+        num_valid_segments > 0,
+        liouville_residuals[last_valid_index] / analysis_duration,
+        nan_scalar,
+    )
+    divergence_rate = jnp.sum(last_valid_spectrum) - liouville_rate_residual
+    liouville_rate_tolerance = jnp.asarray(1e-3, dtype=tangent_dtype) * jnp.maximum(
+        jnp.asarray(1.0, dtype=tangent_dtype), jnp.abs(divergence_rate)
+    )
+    finite_diagnostics = (
+        jnp.all(jnp.isfinite(jnp.where(segment_valid, qr_log_diagonal_spans, 0.0)))
+        & jnp.all(jnp.isfinite(jnp.where(segment_valid, liouville_residuals, 0.0)))
+        & jnp.all(jnp.isfinite(last_valid_spectrum))
+        & jnp.isfinite(liouville_rate_residual)
+    )
+    max_qr_span = jnp.max(jnp.where(segment_valid, qr_log_diagonal_spans, -jnp.inf))
+    qr_warning = max_qr_span > qr_warning_threshold
+    volume_warning = jnp.abs(liouville_rate_residual) > liouville_rate_tolerance
+    severe_volume_error = jnp.abs(liouville_rate_residual) > 10 * liouville_rate_tolerance
+    quality = jnp.where(
+        (~final_active) | (~finite_diagnostics) | severe_volume_error,
+        jnp.asarray(int(LyapunovQuality.INVALID), dtype=jnp.int32),
+        jnp.where(
+            qr_warning | volume_warning,
+            jnp.asarray(int(LyapunovQuality.WARNING), dtype=jnp.int32),
+            jnp.asarray(int(LyapunovQuality.PASS), dtype=jnp.int32),
+        ),
+    )
 
     return LyapunovResult(
         exponents=exponents,
         times=times,
         running_exponents=running_exponents,
         status=status,
+        diagnostics=LyapunovDiagnostics(
+            qr_log_diagonal_spans=qr_log_diagonal_spans,
+            liouville_residuals=liouville_residuals,
+            tail_drift=tail_drift,
+            num_valid_segments=num_valid_segments,
+            precision_budget=precision_budget,
+            qr_warning_threshold=qr_warning_threshold,
+            liouville_rate_residual=liouville_rate_residual,
+            liouville_rate_tolerance=liouville_rate_tolerance,
+            quality=quality,
+        ),
         stats={name: statistics[i] for i, name in enumerate(_STAT_KEYS)},
         metadata={
             "backend": "diffrax",
@@ -279,6 +405,7 @@ def lyapunov_spectrum(
             "transient_time": transient,
             "analysis_time": analysis_duration,
             "num_segments": segment_count,
+            "qr_interval": segment_duration,
             "state_dimension": dimension,
         },
     )
