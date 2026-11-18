@@ -14,17 +14,16 @@ def main() -> None:
     # Enable x64 before constructing model arrays. Long tangent integrations
     # are notably more sensitive to accumulated round-off.
     jax.config.update("jax_enable_x64", True)
-    problem = cpax.IVP(LorenzSystem(), jnp.array([1.0, 1.0, 1.0]), (0.0, 2000.0))
+    problem = cpax.IVP(LorenzSystem(), jnp.array([1.0, 1.0, 1.0]), (0.0, 500.0))
     result = lyapunov_spectrum(
         problem,
-        transient_time=100.0,
-        num_segments=1900,
+        transient_time=50.0,
+        num_segments=4000,
         rtol=1e-8,
         atol=1e-10,
         max_steps=20000,
     )
     assert bool(result.is_success)
-    print(result.report())
     print("Lyapunov spectrum:", result.exponents)
     fig, ax = plt.subplots()
     for index in range(result.exponents.size):
