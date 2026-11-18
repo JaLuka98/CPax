@@ -1,0 +1,200 @@
+"""Analytical and API contracts for Lyapunov-spectrum analysis."""
+
+import diffrax
+import jax
+import jax.numpy as jnp
+import numpy as np
+import pytest
+
+import cpax
+from cpax.analysis import LyapunovResult, lyapunov_spectrum
+from cpax.dynamics import VectorFieldSystem
+from cpax.mechanics import ForcedNewtonianSystem, PhaseSpaceState
+from cpax.results import SolutionStatus
+from cpax.solvers import VelocityVerlet
+
+
+def _diagonal_rhs(t, state, args):
+    del t
+    return args["rates"] * state
+
+
+def _diagonal_problem(rates=(-0.3, 0.7), *, t_span=(0.0, 8.0)):
+    return cpax.IVP(
+        VectorFieldSystem(_diagonal_rhs),
+        jnp.ones(len(rates)),
+        t_span,
+        args={"rates": jnp.asarray(rates)},
+    )
+
+
+def test_analysis_is_a_public_namespace_without_a_root_routine_reexport():
+    assert cpax.analysis.lyapunov_spectrum is lyapunov_spectrum
+    assert not hasattr(cpax, "lyapunov_spectrum")
+
+
+def test_full_diagonal_spectrum_and_convergence_history():
+    with jax.enable_x64(True):
+        result = lyapunov_spectrum(
+            _diagonal_problem((-0.3, 0.7)),
+            num_segments=16,
+            solver=diffrax.Tsit5(),
+            rtol=1e-9,
+            atol=1e-11,
+        )
+
+    assert isinstance(result, LyapunovResult)
+    assert bool(result.is_success)
+    assert result.exponents.shape == (2,)
+    assert result.times.shape == (16,)
+    assert result.running_exponents.shape == (16, 2)
+    np.testing.assert_allclose(result.exponents, [0.7, -0.3], rtol=2e-7, atol=2e-8)
+    np.testing.assert_allclose(result.running_exponents[-1], result.exponents, rtol=0, atol=0)
+    np.testing.assert_allclose(result.times, np.linspace(0.5, 8.0, 16), rtol=0, atol=1e-12)
+    assert result.metadata["state_dimension"] == 2
+    assert result.metadata["num_segments"] == 16
+    assert int(result.stats["num_accepted_steps"]) > 0
+
+
+def test_nested_pytree_state_and_ivp_args_are_flattened_correctly():
+    def rhs(t, state, args):
+        del t
+        return {
+            "position": args["rates"][0] * state["position"],
+            "auxiliary": (
+                args["rates"][1] * state["auxiliary"][0],
+                args["rates"][2] * state["auxiliary"][1],
+            ),
+        }
+
+    rates = jnp.asarray([-0.4, 0.2, 0.9])
+    initial = {
+        "position": jnp.asarray(1.0),
+        "auxiliary": (jnp.asarray([1.0]), jnp.asarray([[1.0]])),
+    }
+    problem = cpax.IVP(VectorFieldSystem(rhs), initial, (0.0, 5.0), args={"rates": rates})
+    result = lyapunov_spectrum(problem, num_segments=10, rtol=1e-7, atol=1e-9)
+
+    assert bool(result.is_success)
+    np.testing.assert_allclose(result.exponents, [0.9, 0.2, -0.4], rtol=2e-4, atol=2e-5)
+
+
+def test_mechanics_system_params_define_the_tangent_dynamics():
+    def damping(t, q, velocity, params):
+        del t, q
+        return -params["damping"] * velocity
+
+    # Free damped mechanics has exponents 0 (translation) and -gamma / m.
+    # The applied-force callback obtains gamma exclusively from system.params.
+    system = ForcedNewtonianSystem(
+        mass=1.0,
+        applied_force=damping,
+        params={"damping": jnp.asarray(3.0)},
+    )
+    problem = cpax.IVP(system, PhaseSpaceState(1.0, 0.0), (0.0, 12.0))
+    result = lyapunov_spectrum(problem, num_segments=24, rtol=1e-7, atol=1e-9)
+
+    assert bool(result.is_success)
+    np.testing.assert_allclose(result.exponents, [0.0, -3.0], rtol=3e-4, atol=3e-5)
+
+
+def test_transient_sets_analysis_window_and_not_parameter_channel():
+    result = lyapunov_spectrum(
+        _diagonal_problem((0.4,), t_span=(0.0, 6.0)),
+        transient_time=2.0,
+        num_segments=4,
+        rtol=1e-7,
+        atol=1e-9,
+    )
+
+    assert bool(result.is_success)
+    np.testing.assert_allclose(result.times, [3.0, 4.0, 5.0, 6.0], atol=1e-6)
+    np.testing.assert_allclose(result.exponents, [0.4], rtol=2e-4, atol=2e-5)
+    assert result.metadata["transient_time"] == 2.0
+    np.testing.assert_allclose(result.metadata["analysis_time"], 4.0)
+
+
+def test_jit_and_vmap_support_parameterised_vector_fields():
+    system = VectorFieldSystem(lambda t, state, args: args["rate"] * state)
+
+    def spectrum(rate):
+        problem = cpax.IVP(system, jnp.asarray(1.0), (0.0, 3.0), args={"rate": rate})
+        return lyapunov_spectrum(problem, num_segments=6, rtol=1e-6, atol=1e-8).exponents
+
+    compiled = jax.jit(spectrum)
+    np.testing.assert_allclose(compiled(jnp.asarray(-0.5)), [-0.5], rtol=3e-4, atol=3e-5)
+    rates = jnp.asarray([-0.5, 0.1, 0.8])
+    np.testing.assert_allclose(jax.vmap(compiled)(rates)[:, 0], rates, rtol=4e-4, atol=4e-5)
+
+
+def test_metadata_reflects_shared_diffrax_option_resolution():
+    result = lyapunov_spectrum(
+        _diagonal_problem((0.2,)),
+        num_segments=4,
+        solver="auto",
+        rtol=1e-6,
+        atol=1e-8,
+    )
+
+    assert result.metadata["backend"] == "diffrax"
+    assert result.metadata["solver"] == "Tsit5"
+    assert result.metadata["solver_selection"] == "auto"
+    assert result.metadata["stepsize_controller"] == "PIDController"
+    assert float(result.metadata["rtol"]) == pytest.approx(1e-6)
+    assert float(result.metadata["atol"]) == pytest.approx(1e-8)
+
+
+@pytest.mark.parametrize(
+    ("problem", "kwargs", "exception"),
+    [
+        (_diagonal_problem(), {"num_segments": 0}, ValueError),
+        (_diagonal_problem(), {"num_segments": True}, ValueError),
+        (_diagonal_problem(), {"num_segments": 2, "transient_time": 8.0}, ValueError),
+        (_diagonal_problem(), {"num_segments": 2, "solver": VelocityVerlet()}, TypeError),
+    ],
+)
+def test_invalid_analysis_configuration_is_rejected(problem, kwargs, exception):
+    with pytest.raises(exception):
+        lyapunov_spectrum(problem, **kwargs)
+
+
+def test_complex_state_and_non_ivp_are_rejected():
+    complex_problem = cpax.IVP(
+        VectorFieldSystem(lambda t, y, args: 1j * y),
+        jnp.asarray(1.0 + 0.0j),
+        (0.0, 1.0),
+    )
+    with pytest.raises(TypeError, match="real"):
+        lyapunov_spectrum(complex_problem, num_segments=2)
+    with pytest.raises(TypeError, match="IVP"):
+        lyapunov_spectrum(object(), num_segments=2)
+
+
+def test_nonraising_failure_marks_invalid_spectrum_and_preserves_diagnostics():
+    result = lyapunov_spectrum(
+        _diagonal_problem((0.2,), t_span=(0.0, 4.0)),
+        num_segments=4,
+        solver=diffrax.Euler(),
+        dt0=0.01,
+        stepsize_controller=diffrax.ConstantStepSize(),
+        max_steps=1,
+        throw=False,
+    )
+
+    assert int(result.status) == SolutionStatus.FAILED
+    assert not bool(result.is_success)
+    assert bool(jnp.all(jnp.isnan(result.exponents)))
+    assert bool(jnp.all(jnp.isnan(result.running_exponents)))
+    assert int(result.stats["num_steps"]) == 1
+
+
+def test_raising_failure_matches_solve_contract():
+    with pytest.raises(RuntimeError, match="maximum number of solver steps"):
+        lyapunov_spectrum(
+            _diagonal_problem((0.2,), t_span=(0.0, 4.0)),
+            num_segments=4,
+            solver=diffrax.Euler(),
+            dt0=0.01,
+            stepsize_controller=diffrax.ConstantStepSize(),
+            max_steps=1,
+        )
