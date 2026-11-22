@@ -1,5 +1,6 @@
 """Result containers for dynamical-systems analysis."""
 
+import dataclasses
 from enum import IntEnum
 from typing import Any
 
@@ -8,6 +9,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax.core import Tracer
+from jaxtyping import AbstractArray, Array, Float, Integer, jaxtyped
 
 from cpax._validation import enum_code, time_grid
 from cpax.results import SolutionStatus
@@ -25,6 +27,26 @@ class LyapunovQuality(IntEnum):
     INVALID = 2
 
 
+def _check_annotated_arrays(module: eqx.Module, prefix: str = "") -> None:
+    """Check array fields against their jaxtyping annotations.
+
+    Call this inside a ``jaxtyped`` context so that the dimension names
+    ``segment`` and ``exponent`` are shared between a result and its
+    diagnostics.
+    """
+    for field in dataclasses.fields(module):
+        hint = field.type
+        if (
+            isinstance(hint, type)
+            and issubclass(hint, AbstractArray)
+            and not isinstance(jnp.asarray(getattr(module, field.name)), hint)
+        ):
+            raise ValueError(
+                f"{prefix}{field.name} must match {hint.__name__}, "
+                "where segment = len(times) and exponent = len(exponents)."
+            )
+
+
 class LyapunovDiagnostics(eqx.Module):
     """JAX-compatible numerical-health measurements for a spectrum estimate.
 
@@ -36,15 +58,15 @@ class LyapunovDiagnostics(eqx.Module):
     halfway through the valid analysis history.
     """
 
-    qr_log_diagonal_spans: jax.Array
-    liouville_residuals: jax.Array
-    tail_drift: jax.Array
-    num_valid_segments: jax.Array | int
-    precision_budget: jax.Array
-    qr_warning_threshold: jax.Array
-    liouville_rate_residual: jax.Array
-    liouville_rate_tolerance: jax.Array
-    quality: jax.Array | int
+    qr_log_diagonal_spans: Float[Array, " segment"]
+    liouville_residuals: Float[Array, " segment"]
+    tail_drift: Float[Array, " exponent"]
+    num_valid_segments: Integer[Array, ""] = eqx.field(converter=jnp.asarray)
+    precision_budget: Float[Array, ""]
+    qr_warning_threshold: Float[Array, ""]
+    liouville_rate_residual: Float[Array, ""]
+    liouville_rate_tolerance: Float[Array, ""]
+    quality: Integer[Array, ""] = eqx.field(converter=jnp.asarray)
 
     @property
     def is_healthy(self) -> jax.Array:
@@ -60,90 +82,61 @@ class LyapunovResult(eqx.Module):
     from all intervals through ``times[i]``. ``exponents`` equals the final
     row when integration succeeds. Failed calculations may retain a valid
     prefix in ``running_exponents`` and use NaN values thereafter.
+
+    Array shapes are checked at construction against the jaxtyping
+    annotations, where ``segment`` is the number of QR intervals and
+    ``exponent`` the number of exponents.
     """
 
-    exponents: jax.Array
-    times: jax.Array
-    running_exponents: jax.Array
-    status: jax.Array | int
+    exponents: Float[Array, " exponent"]
+    times: Float[Array, " segment"]
+    running_exponents: Float[Array, "segment exponent"]
+    status: Integer[Array, ""]
     diagnostics: LyapunovDiagnostics | None = None
     stats: dict[str, Any] = eqx.field(default_factory=dict)
     metadata: dict[str, Any] = eqx.field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        exponents = jnp.asarray(self.exponents)
-        if exponents.ndim != 1 or exponents.shape[0] < 1 or exponents.dtype.kind != "f":
-            raise ValueError("exponents must be a nonempty one-dimensional real floating-point array.")
+        object.__setattr__(self, "exponents", jnp.asarray(self.exponents))
+        object.__setattr__(self, "times", time_grid("times", self.times))
+        object.__setattr__(self, "running_exponents", jnp.asarray(self.running_exponents))
+        object.__setattr__(self, "status", enum_code("status", self.status, SolutionStatus))
 
-        times = time_grid("times", self.times)
+        with jaxtyped("context"):
+            _check_annotated_arrays(self)
+            if self.exponents.size < 1:
+                raise ValueError("exponents must be a nonempty one-dimensional real floating-point array.")
 
-        running_exponents = jnp.asarray(self.running_exponents)
-        if (
-            running_exponents.ndim != 2
-            or running_exponents.shape != (times.shape[0], exponents.shape[0])
-            or running_exponents.dtype.kind != "f"
-        ):
-            raise ValueError(
-                "running_exponents must have shape (len(times), len(exponents)) and a real floating dtype."
-            )
+            diagnostics = self.diagnostics
+            if diagnostics is None:
+                dtype = self.exponents.dtype
+                diagnostics = LyapunovDiagnostics(
+                    qr_log_diagonal_spans=jnp.full(self.times.shape, jnp.nan, dtype=dtype),
+                    liouville_residuals=jnp.full(self.times.shape, jnp.nan, dtype=dtype),
+                    tail_drift=jnp.full(self.exponents.shape, jnp.nan, dtype=dtype),
+                    num_valid_segments=jnp.asarray(0, dtype=jnp.int32),
+                    precision_budget=jnp.asarray(jnp.nan, dtype=dtype),
+                    qr_warning_threshold=jnp.asarray(jnp.nan, dtype=dtype),
+                    liouville_rate_residual=jnp.asarray(jnp.nan, dtype=dtype),
+                    liouville_rate_tolerance=jnp.asarray(jnp.nan, dtype=dtype),
+                    quality=jnp.asarray(int(LyapunovQuality.INVALID), dtype=jnp.int32),
+                )
+            self._validate_diagnostics(diagnostics, num_segments=self.times.size)
 
-        status = enum_code("status", self.status, SolutionStatus)
-
-        diagnostics = self.diagnostics
-        if diagnostics is None:
-            diagnostics = LyapunovDiagnostics(
-                qr_log_diagonal_spans=jnp.full(times.shape, jnp.nan, dtype=exponents.dtype),
-                liouville_residuals=jnp.full(times.shape, jnp.nan, dtype=exponents.dtype),
-                tail_drift=jnp.full(exponents.shape, jnp.nan, dtype=exponents.dtype),
-                num_valid_segments=jnp.asarray(0, dtype=jnp.int32),
-                precision_budget=jnp.asarray(jnp.nan, dtype=exponents.dtype),
-                qr_warning_threshold=jnp.asarray(jnp.nan, dtype=exponents.dtype),
-                liouville_rate_residual=jnp.asarray(jnp.nan, dtype=exponents.dtype),
-                liouville_rate_tolerance=jnp.asarray(jnp.nan, dtype=exponents.dtype),
-                quality=jnp.asarray(int(LyapunovQuality.INVALID), dtype=jnp.int32),
-            )
-        self._validate_diagnostics(diagnostics, times=times, exponents=exponents)
-
-        object.__setattr__(self, "exponents", exponents)
-        object.__setattr__(self, "times", times)
-        object.__setattr__(self, "running_exponents", running_exponents)
-        object.__setattr__(self, "status", status)
         object.__setattr__(self, "diagnostics", diagnostics)
 
     @staticmethod
-    def _validate_diagnostics(diagnostics: LyapunovDiagnostics, *, times: jax.Array, exponents: jax.Array) -> None:
-        """Validate the fixed-shape, JAX-compatible diagnostic fields."""
+    def _validate_diagnostics(diagnostics: LyapunovDiagnostics, *, num_segments: int) -> None:
+        """Validate diagnostics in the dimension context of the enclosing result."""
         if not isinstance(diagnostics, LyapunovDiagnostics):
             raise TypeError("diagnostics must be a LyapunovDiagnostics instance or None.")
-        for name in ("qr_log_diagonal_spans", "liouville_residuals"):
-            value = jnp.asarray(getattr(diagnostics, name))
-            if value.shape != times.shape or value.dtype.kind != "f":
-                raise ValueError(f"diagnostics.{name} must match times and have a real floating dtype.")
-        tail_drift = jnp.asarray(diagnostics.tail_drift)
-        if tail_drift.shape != exponents.shape or tail_drift.dtype.kind != "f":
-            raise ValueError("diagnostics.tail_drift must match exponents and have a real floating dtype.")
-        for name in (
-            "precision_budget",
-            "qr_warning_threshold",
-            "liouville_rate_residual",
-            "liouville_rate_tolerance",
-        ):
-            value = jnp.asarray(getattr(diagnostics, name))
-            if value.ndim != 0 or value.dtype.kind != "f":
-                raise ValueError(f"diagnostics.{name} must be a scalar real floating-point value.")
-        for name in ("num_valid_segments", "quality"):
-            value = jnp.asarray(getattr(diagnostics, name))
-            if value.ndim != 0 or value.dtype.kind not in "iu":
-                raise TypeError(f"diagnostics.{name} must be a scalar integer value.")
-        if not isinstance(diagnostics.num_valid_segments, Tracer):
-            count = int(np.asarray(diagnostics.num_valid_segments))
-            if not 0 <= count <= times.size:
-                raise ValueError("diagnostics.num_valid_segments must lie between zero and len(times).")
-        if not isinstance(diagnostics.quality, Tracer):
-            try:
-                LyapunovQuality(int(np.asarray(diagnostics.quality)))
-            except ValueError as exc:
-                raise ValueError("diagnostics.quality must be a LyapunovQuality outcome code.") from exc
+        enum_code("diagnostics.quality", diagnostics.quality, LyapunovQuality)
+        count = diagnostics.num_valid_segments
+        if count.ndim != 0 or count.dtype.kind not in "iu":
+            raise TypeError("diagnostics.num_valid_segments must be a scalar integer value.")
+        if not isinstance(count, Tracer) and not 0 <= int(count) <= num_segments:
+            raise ValueError("diagnostics.num_valid_segments must lie between zero and len(times).")
+        _check_annotated_arrays(diagnostics, prefix="diagnostics.")
 
     @property
     def is_success(self) -> jax.Array:
