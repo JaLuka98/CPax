@@ -127,20 +127,19 @@ def lyapunov_spectrum(
         flattened_derivative, _ = ravel_pytree(derivative)
         return flattened_derivative
 
+    derivative_shape = jax.eval_shape(flat_vector_field, t0, flat_initial_state, problem.args)
+    if derivative_shape.shape != (dimension,) or derivative_shape.dtype.kind != "f":
+        raise ValueError("vector_field must return real floating derivatives with the IVP state shape.")
     # Produce an immediate, CPax-specific error for a field that can be
     # evaluated normally but cannot be differentiated with respect to state.
     try:
-        derivative_shape = jax.eval_shape(flat_vector_field, t0, flat_initial_state, problem.args)
-        if derivative_shape.shape != (dimension,) or derivative_shape.dtype.kind != "f":
-            raise ValueError("vector_field must return real floating derivatives with the IVP state shape.")
         jacobian_shape = jax.eval_shape(
             jax.jacfwd(lambda state: flat_vector_field(t0, state, problem.args)),
             flat_initial_state,
         )
     except (TypeError, ValueError) as exc:
         raise ValueError(
-            "lyapunov_spectrum requires a JAX-differentiable vector field with real derivatives. "
-            f"Original error: {exc}"
+            f"lyapunov_spectrum requires a JAX-differentiable vector field. Original error: {exc}"
         ) from exc
     if jacobian_shape.shape != (dimension, dimension):
         raise ValueError("The vector-field Jacobian must have shape (state_dimension, state_dimension).")

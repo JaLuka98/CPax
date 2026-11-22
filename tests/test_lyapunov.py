@@ -194,6 +194,32 @@ def test_complex_state_and_non_ivp_are_rejected():
         lyapunov_spectrum(object(), num_segments=2)
 
 
+def test_complex_derivative_reports_dtype_error():
+    problem = cpax.IVP(
+        VectorFieldSystem(lambda t, y, args: (1 + 0j) * y),
+        jnp.ones(2),
+        (0.0, 1.0),
+    )
+    with pytest.raises(ValueError, match="real floating derivatives") as excinfo:
+        lyapunov_spectrum(problem, num_segments=2)
+    assert "differentiable" not in str(excinfo.value)
+
+
+def test_non_differentiable_vector_field_is_rejected():
+    @jax.custom_vjp
+    def decay(y):
+        return -y
+
+    decay.defvjp(lambda y: (-y, None), lambda _, cotangent: (-cotangent,))
+    problem = cpax.IVP(
+        VectorFieldSystem(lambda t, y, args: decay(y)),
+        jnp.ones(2),
+        (0.0, 1.0),
+    )
+    with pytest.raises(ValueError, match="JAX-differentiable"):
+        lyapunov_spectrum(problem, num_segments=2)
+
+
 def test_nonraising_failure_marks_invalid_spectrum_and_preserves_diagnostics():
     result = lyapunov_spectrum(
         _diagonal_problem((0.2,), t_span=(0.0, 4.0)),
