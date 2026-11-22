@@ -6,10 +6,12 @@ import numpy as np
 import pytest
 
 from cpax._validation import (
+    as_array,
     concrete_nonnegative_real,
     enum_code,
     positive_integer,
     positive_real,
+    require_callable,
     time_grid,
 )
 from cpax.results import SolutionStatus
@@ -113,3 +115,31 @@ def test_time_grid_promotes_integer_times():
 def test_time_grid_rejects_invalid_grids(value):
     with pytest.raises(ValueError, match="ts must be a nonempty one-dimensional array"):
         time_grid("ts", value)
+
+
+def test_as_array_reports_conversion_failures_as_type_errors():
+    with pytest.raises(TypeError, match="y0 leaf"):
+        as_array([1.0, [2.0]], "y0 leaf")
+
+
+@pytest.mark.parametrize(
+    ("value", "float_scalars", "kind"),
+    [
+        (2, True, "f"),
+        (np.int64(2), True, "f"),
+        (True, True, "b"),
+        (jnp.asarray([1, 2]), True, "i"),
+        (2, False, "i"),
+    ],
+)
+def test_as_array_promotes_only_python_numeric_scalars(value, float_scalars, kind):
+    assert as_array(value, "unused", float_scalars=float_scalars).dtype.kind == kind
+
+
+def test_require_callable():
+    require_callable("potential", abs)
+    require_callable("force_fn", None, optional=True)
+    with pytest.raises(TypeError, match=r"^potential must be callable\.$"):
+        require_callable("potential", None)
+    with pytest.raises(TypeError, match=r"^force_fn must be callable or None\.$"):
+        require_callable("force_fn", 1.0, optional=True)

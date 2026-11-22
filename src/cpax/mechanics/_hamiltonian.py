@@ -5,6 +5,7 @@ from typing import Any
 
 import jax
 
+from cpax._validation import require_callable
 from cpax.dynamics import DynamicalSystem
 
 from ._newtonian import _scalar_energy
@@ -24,8 +25,7 @@ class HamiltonianSystem(DynamicalSystem):
     params: Any
 
     def __init__(self, *, hamiltonian: Hamiltonian, params: Any = None) -> None:
-        if not callable(hamiltonian):
-            raise TypeError("hamiltonian must be callable.")
+        require_callable("hamiltonian", hamiltonian)
         object.__setattr__(self, "hamiltonian", hamiltonian)
         object.__setattr__(self, "params", params)
 

@@ -1,12 +1,37 @@
 """Shared argument validation for CPax constructors and routines."""
 
 from enum import IntEnum
-from numbers import Integral
+from numbers import Integral, Number
+from typing import Any
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 from jax.core import Tracer
+
+
+def as_array(value: Any, message: str, *, float_scalars: bool = False) -> jax.Array:
+    """Convert a value to a JAX array, reporting failures as ``TypeError(message)``.
+
+    With ``float_scalars``, a Python numeric scalar (but not a Boolean) that
+    describes a continuous quantity is promoted to the default float dtype.
+    Explicitly integer-valued arrays are never cast silently.
+    """
+    try:
+        array = jnp.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise TypeError(message) from exc
+    if float_scalars and array.dtype.kind in "iu" and isinstance(value, Number) and not isinstance(value, bool):
+        array = array.astype(jnp.result_type(float))
+    return array
+
+
+def require_callable(name: str, value: Any, *, optional: bool = False) -> None:
+    """Reject a non-callable value, or a non-callable non-``None`` value if optional."""
+    if optional and value is None:
+        return
+    if not callable(value):
+        raise TypeError(f"{name} must be callable or None." if optional else f"{name} must be callable.")
 
 
 def _finite_real_scalar(value: float | jax.Array, message: str, *, allow_zero: bool) -> float:

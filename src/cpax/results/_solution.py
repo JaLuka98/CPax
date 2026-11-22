@@ -7,7 +7,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 
-from cpax._validation import enum_code, time_grid
+from cpax._validation import as_array, enum_code, time_grid
 from cpax.dynamics._systems import State
 
 
@@ -49,10 +49,7 @@ class Solution(eqx.Module):
         n = ts.shape[0]
 
         def normalise(leaf: Any) -> jax.Array:
-            try:
-                array = jnp.asarray(leaf)
-            except (TypeError, ValueError) as exc:
-                raise TypeError("Each ys leaf must be a numerical array.") from exc
+            array = as_array(leaf, "Each ys leaf must be a numerical array.")
             if array.ndim < 1 or array.shape[0] != n:
                 raise ValueError("Each ys leaf must have leading dimension len(ts).")
             if array.dtype.kind not in "fc":

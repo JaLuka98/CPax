@@ -6,6 +6,7 @@ from typing import Any
 import jax
 import jax.numpy as jnp
 
+from cpax._validation import as_array, require_callable
 from cpax.dynamics import DynamicalSystem
 
 from ._mass import _mass_for, _validate_mass
@@ -50,10 +51,8 @@ class NewtonianSystem(DynamicalSystem):
         params: Any = None,
         force_fn: ConservativeForce | None = None,
     ) -> None:
-        if not callable(potential):
-            raise TypeError("potential must be callable.")
-        if force_fn is not None and not callable(force_fn):
-            raise TypeError("force_fn must be callable or None.")
+        require_callable("potential", potential)
+        require_callable("force_fn", force_fn, optional=True)
         m = _validate_mass(mass)
         object.__setattr__(self, "potential", potential)
         object.__setattr__(self, "mass", m)
@@ -73,10 +72,7 @@ class NewtonianSystem(DynamicalSystem):
         if self.force_fn is None:
             return -jax.grad(self._potential_value)(q)
         value = self.force_fn(q) if self.params is None else self.force_fn(q, self.params)
-        try:
-            result = jnp.asarray(value)
-        except (ValueError, TypeError) as exc:
-            raise TypeError("force_fn must return a real floating-point array.") from exc
+        result = as_array(value, "force_fn must return a real floating-point array.")
         if result.dtype.kind != "f":
             raise TypeError("force_fn must return a real floating-point array.")
         if result.shape != q.shape:
