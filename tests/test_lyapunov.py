@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 import cpax
-from cpax.analysis import LyapunovQuality, LyapunovResult, lyapunov_spectrum
+from cpax.analysis import LyapunovDiagnostics, LyapunovQuality, LyapunovResult, lyapunov_spectrum
 from cpax.dynamics import VectorFieldSystem
 from cpax.mechanics import ForcedNewtonianSystem, PhaseSpaceState
 from cpax.results import SolutionStatus
@@ -173,13 +173,35 @@ def test_metadata_reflects_shared_diffrax_option_resolution():
     [
         (_diagonal_problem(), {"num_segments": 0}, ValueError),
         (_diagonal_problem(), {"num_segments": True}, ValueError),
+        (_diagonal_problem(), {"num_segments": 1.5}, ValueError),
+        (_diagonal_problem(), {"num_segments": -1}, ValueError),
         (_diagonal_problem(), {"num_segments": 2, "transient_time": 8.0}, ValueError),
+        (_diagonal_problem(), {"num_segments": 2, "transient_time": -1.0}, ValueError),
+        (_diagonal_problem(), {"num_segments": 2, "transient_time": float("nan")}, ValueError),
+        (_diagonal_problem(), {"num_segments": 2, "transient_time": float("inf")}, ValueError),
+        (_diagonal_problem(), {"num_segments": 2, "transient_time": jnp.asarray([0.1])}, ValueError),
+        (_diagonal_problem(), {"num_segments": 2, "transient_time": True}, ValueError),
+        (_diagonal_problem(), {"num_segments": 2, "transient_time": [0.1, [0.2]]}, TypeError),
         (_diagonal_problem(), {"num_segments": 2, "solver": VelocityVerlet()}, TypeError),
     ],
 )
 def test_invalid_analysis_configuration_is_rejected(problem, kwargs, exception):
     with pytest.raises(exception):
         lyapunov_spectrum(problem, **kwargs)
+
+
+def test_traced_transient_time_is_rejected():
+    def spectrum(transient_time):
+        return lyapunov_spectrum(_diagonal_problem(), transient_time=transient_time, num_segments=2).exponents
+
+    with pytest.raises(TypeError, match="concrete"):
+        jax.jit(spectrum)(1.0)
+
+
+def test_empty_state_is_rejected():
+    problem = cpax.IVP(VectorFieldSystem(lambda t, y, args: -y), jnp.zeros(0), (0.0, 1.0))
+    with pytest.raises(ValueError, match="nonempty"):
+        lyapunov_spectrum(problem, num_segments=2)
 
 
 def test_complex_state_and_non_ivp_are_rejected():
@@ -251,3 +273,101 @@ def test_raising_failure_matches_solve_contract():
             stepsize_controller=diffrax.ConstantStepSize(),
             max_steps=1,
         )
+
+
+def _diagnostics(**overrides):
+    fields = {
+        "qr_log_diagonal_spans": jnp.zeros(3),
+        "liouville_residuals": jnp.zeros(3),
+        "tail_drift": jnp.zeros(2),
+        "num_valid_segments": 3,
+        "precision_budget": jnp.asarray(36.0),
+        "qr_warning_threshold": jnp.asarray(18.0),
+        "liouville_rate_residual": jnp.asarray(0.0),
+        "liouville_rate_tolerance": jnp.asarray(1e-3),
+        "quality": int(LyapunovQuality.PASS),
+    }
+    fields.update(overrides)
+    return LyapunovDiagnostics(**fields)
+
+
+def _result_fields(**overrides):
+    fields = {
+        "exponents": jnp.asarray([0.5, -0.5]),
+        "times": jnp.asarray([1.0, 2.0, 3.0]),
+        "running_exponents": jnp.zeros((3, 2)),
+        "status": int(SolutionStatus.SUCCESS),
+        "diagnostics": _diagnostics(),
+    }
+    fields.update(overrides)
+    return fields
+
+
+def test_result_defaults_missing_diagnostics_to_invalid():
+    result = LyapunovResult(**_result_fields(times=jnp.asarray([1, 2, 3]), diagnostics=None))
+
+    assert result.times.dtype.kind == "f"
+    assert result.status.shape == ()
+    diagnostics = result.diagnostics
+    assert diagnostics.qr_log_diagonal_spans.shape == (3,)
+    assert diagnostics.tail_drift.shape == (2,)
+    assert bool(jnp.all(jnp.isnan(diagnostics.liouville_residuals)))
+    assert int(diagnostics.num_valid_segments) == 0
+    assert int(diagnostics.quality) == LyapunovQuality.INVALID
+
+
+@pytest.mark.parametrize(
+    ("overrides", "exception", "match"),
+    [
+        ({"exponents": jnp.zeros((2, 1))}, ValueError, r"^exponents"),
+        ({"exponents": jnp.zeros(0), "running_exponents": jnp.zeros((3, 0))}, ValueError, r"^exponents"),
+        ({"exponents": jnp.asarray([1, -1])}, ValueError, r"^exponents"),
+        ({"times": jnp.ones((3, 1))}, ValueError, r"^times"),
+        ({"times": jnp.zeros(0)}, ValueError, r"^times"),
+        ({"times": jnp.asarray([1.0, 2.0, 3.0]) * 1j}, ValueError, r"^times"),
+        ({"running_exponents": jnp.zeros((4, 2))}, ValueError, r"^running_exponents"),
+        ({"running_exponents": jnp.zeros((3, 3))}, ValueError, r"^running_exponents"),
+        ({"running_exponents": jnp.zeros((3, 2), dtype=jnp.int32)}, ValueError, r"^running_exponents"),
+        ({"status": 0.0}, TypeError, r"^status"),
+        ({"status": jnp.asarray([0])}, TypeError, r"^status"),
+        ({"status": 7}, ValueError, r"^status"),
+        ({"diagnostics": object()}, TypeError, r"^diagnostics"),
+    ],
+)
+def test_result_rejects_invalid_fields(overrides, exception, match):
+    with pytest.raises(exception, match=match):
+        LyapunovResult(**_result_fields(**overrides))
+
+
+@pytest.mark.parametrize(
+    ("overrides", "exception", "match"),
+    [
+        ({"qr_log_diagonal_spans": jnp.zeros(4)}, ValueError, "qr_log_diagonal_spans"),
+        ({"liouville_residuals": jnp.zeros(4)}, ValueError, "liouville_residuals"),
+        ({"tail_drift": jnp.zeros(3)}, ValueError, "tail_drift"),
+        ({"precision_budget": jnp.zeros(2)}, ValueError, "precision_budget"),
+        ({"liouville_rate_tolerance": jnp.asarray(1)}, ValueError, "liouville_rate_tolerance"),
+        ({"num_valid_segments": 1.0}, TypeError, "num_valid_segments"),
+        ({"num_valid_segments": -1}, ValueError, "num_valid_segments"),
+        ({"num_valid_segments": 4}, ValueError, "num_valid_segments"),
+        ({"quality": 0.0}, TypeError, "quality"),
+        ({"quality": 9}, ValueError, "quality"),
+    ],
+)
+def test_result_rejects_invalid_diagnostics(overrides, exception, match):
+    with pytest.raises(exception, match=rf"^diagnostics\.{match}"):
+        LyapunovResult(**_result_fields(diagnostics=_diagnostics(**overrides)))
+
+
+def test_result_construction_under_jit():
+    def build(status, count, quality):
+        diagnostics = _diagnostics(num_valid_segments=count, quality=quality)
+        return LyapunovResult(**_result_fields(status=status, diagnostics=diagnostics)).is_success
+
+    assert bool(jax.jit(build)(jnp.asarray(0), jnp.asarray(3), jnp.asarray(0)))
+
+    def mismatched(exponents):
+        return LyapunovResult(**_result_fields(exponents=exponents)).exponents
+
+    with pytest.raises(ValueError, match=r"^running_exponents"):
+        jax.jit(mismatched)(jnp.zeros(3))
