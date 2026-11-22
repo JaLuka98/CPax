@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax.core import Tracer
 
+from cpax._validation import enum_code, time_grid
 from cpax.results import SolutionStatus
 
 
@@ -74,11 +75,7 @@ class LyapunovResult(eqx.Module):
         if exponents.ndim != 1 or exponents.shape[0] < 1 or exponents.dtype.kind != "f":
             raise ValueError("exponents must be a nonempty one-dimensional real floating-point array.")
 
-        times = jnp.asarray(self.times)
-        if times.ndim != 1 or times.shape[0] < 1 or times.dtype.kind not in "iuf":
-            raise ValueError("times must be a nonempty one-dimensional array of real times.")
-        if times.dtype.kind in "iu":
-            times = times.astype(jnp.result_type(float))
+        times = time_grid("times", self.times)
 
         running_exponents = jnp.asarray(self.running_exponents)
         if (
@@ -90,14 +87,7 @@ class LyapunovResult(eqx.Module):
                 "running_exponents must have shape (len(times), len(exponents)) and a real floating dtype."
             )
 
-        status = jnp.asarray(self.status)
-        if status.ndim != 0 or status.dtype.kind not in "iu":
-            raise TypeError("status must be a scalar integer outcome code.")
-        if not isinstance(status, Tracer) and int(np.asarray(status)) not in (
-            SolutionStatus.SUCCESS,
-            SolutionStatus.FAILED,
-        ):
-            raise ValueError("status must be a SolutionStatus outcome code.")
+        status = enum_code("status", self.status, SolutionStatus)
 
         diagnostics = self.diagnostics
         if diagnostics is None:

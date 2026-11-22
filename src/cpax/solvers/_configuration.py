@@ -1,27 +1,14 @@
 """Shared validation and Diffrax configuration for CPax integrations."""
 
-from numbers import Integral
 from typing import Literal
 
 import diffrax
 import jax
-import numpy as np
-from jax.core import Tracer
+
+from cpax._validation import positive_integer, positive_real
 
 from ._auto import Auto
 from ._velocity_verlet import VelocityVerlet
-
-
-def positive_real(name: str, value: float | jax.Array) -> None:
-    """Validate a positive finite real scalar when it is concrete."""
-    try:
-        array = np.asarray(value) if not isinstance(value, Tracer) else None
-    except (TypeError, ValueError) as exc:
-        raise TypeError(f"{name} must be a positive finite real scalar.") from exc
-    if array is not None and (
-        array.ndim != 0 or array.dtype.kind not in "iuf" or not np.isfinite(array) or array <= 0
-    ):
-        raise ValueError(f"{name} must be a positive finite real scalar.")
 
 
 def resolve_solver(
@@ -50,8 +37,7 @@ def configure_solver(
     throw: bool,
 ) -> tuple[diffrax.AbstractSolver, Literal["auto", "explicit"], diffrax.AbstractStepSizeController]:
     """Validate CPax's common solve options and construct a controller."""
-    if not isinstance(max_steps, Integral) or isinstance(max_steps, bool) or max_steps < 1:
-        raise ValueError("max_steps must be a positive integer.")
+    positive_integer("max_steps", max_steps)
     if not isinstance(throw, bool):
         raise TypeError("throw must be a Boolean.")
     for name, value in (("dt0", dt0), ("rtol", rtol), ("atol", atol)):

@@ -1,6 +1,5 @@
 """Benettin QR estimates for continuous-time Lyapunov spectra."""
 
-from numbers import Integral
 from typing import Any, Literal
 
 import diffrax
@@ -10,6 +9,7 @@ import numpy as np
 from jax.core import Tracer
 from jax.flatten_util import ravel_pytree
 
+from cpax._validation import concrete_nonnegative_real, positive_integer
 from cpax.problems import IVP
 from cpax.results import SolutionStatus
 from cpax.solvers._auto import Auto
@@ -20,26 +20,6 @@ from ._result import LyapunovDiagnostics, LyapunovQuality, LyapunovResult
 
 _STAT_KEYS = ("num_steps", "num_accepted_steps", "num_rejected_steps")
 type _TimeLike = float | int | jax.Array | np.ndarray
-
-
-def _static_nonnegative_real(name: str, value: float | jax.Array) -> float:
-    """Return a concrete nonnegative scalar configuration value."""
-    if isinstance(value, Tracer):
-        raise TypeError(f"{name} must be a concrete nonnegative finite real scalar.")
-    try:
-        array = np.asarray(value)
-    except (TypeError, ValueError) as exc:
-        raise TypeError(f"{name} must be a concrete nonnegative finite real scalar.") from exc
-    if array.ndim != 0 or array.dtype.kind not in "iuf" or not np.isfinite(array) or array < 0:
-        raise ValueError(f"{name} must be a concrete nonnegative finite real scalar.")
-    return float(array)
-
-
-def _validate_num_segments(num_segments: int) -> int:
-    """Validate the static QR interval count."""
-    if not isinstance(num_segments, Integral) or isinstance(num_segments, bool) or num_segments < 1:
-        raise ValueError("num_segments must be a positive integer.")
-    return int(num_segments)
 
 
 def _final_state(ys: Any) -> Any:
@@ -96,8 +76,8 @@ def lyapunov_spectrum(
     """
     if not isinstance(problem, IVP):
         raise TypeError("lyapunov_spectrum currently supports only cpax.IVP problems.")
-    transient = _static_nonnegative_real("transient_time", transient_time)
-    segment_count = _validate_num_segments(num_segments)
+    transient = concrete_nonnegative_real("transient_time", transient_time)
+    segment_count = positive_integer("num_segments", num_segments)
     flat_initial_state, unravel_state, dimension = _real_state_dimension(problem)
 
     preliminary_solver, _ = resolve_solver(solver)
