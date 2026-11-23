@@ -195,3 +195,9 @@ Temporary Items
 # Images and animations
 *.gif
 *.png
+
+# Custom user settings
+.vscode/settings.json
+
+# Developers can place test and checks in this folder, does not pollute
+temp_dev
