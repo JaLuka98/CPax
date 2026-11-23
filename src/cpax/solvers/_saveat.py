@@ -10,6 +10,8 @@ import jax.numpy as jnp
 import numpy as np
 from jax.core import Tracer
 
+from cpax._validation import as_array
+
 type SaveKind = Literal["final", "linspace", "at"]
 
 
@@ -41,10 +43,7 @@ class SaveAt(eqx.Module):
     @classmethod
     def at(cls, times: Sequence[float] | jax.Array) -> "SaveAt":
         """Save at explicitly supplied, strictly increasing times."""
-        try:
-            arr = jnp.asarray(times)
-        except (TypeError, ValueError) as exc:
-            raise TypeError("SaveAt.at times must be a one-dimensional numeric array.") from exc
+        arr = as_array(times, "SaveAt.at times must be a one-dimensional numeric array.")
         if arr.ndim != 1 or arr.shape[0] == 0 or arr.dtype.kind not in "iuf":
             raise ValueError("SaveAt.at times must be a nonempty 1D array of real values.")
         if arr.dtype.kind in "iu":

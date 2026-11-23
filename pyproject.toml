@@ -24,6 +24,7 @@ dependencies = [
   "diffrax>=0.7.2,<0.8",
   "equinox>=0.13.8",
   "jax>=0.11",
+  "jaxtyping>=0.3",
   "numpy>=2.0",
   "matplotlib>=3.7",
   "pillow>=13.0.0",
@@ -97,6 +98,8 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "src/cpax/__init__.py" = ["F401"]
+# jaxtyping shape strings such as " segment" are not forward references.
+"src/cpax/analysis/_result.py" = ["F722"]
 
 [tool.ruff.format]
 quote-style = "double"

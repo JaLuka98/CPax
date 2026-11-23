@@ -136,3 +136,15 @@ contract and numerical sensitivity limitations.
 
 .. literalinclude:: ../../../examples/damping_parameter_inference.py
    :language: python
+
+Lorenz Lyapunov spectrum
+------------------------
+
+The Lorenz system is a useful example of a continuous-time chaotic system.
+This example evolves its state and an autodifferentiated tangent basis, then
+plots the running QR estimates of its complete Lyapunov spectrum. The initial
+transient is excluded from the average, and the plot should be inspected for
+convergence before interpreting the final values.
+
+.. literalinclude:: ../../../examples/lorenz_lyapunov.py
+   :language: python
