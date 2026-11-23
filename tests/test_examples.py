@@ -103,5 +103,6 @@ def test_import_all_simple_and_mechanics_examples():
         "coupled_oscillators.py",
         "forced_duffing_oscillator.py",
         "forced_damped_pendulum.py",
+        "lorenz_lyapunov.py",
     ):
         assert callable(runpy.run_path(str(ROOT / "examples" / filename))["main"])
