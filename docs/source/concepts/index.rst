@@ -11,3 +11,4 @@ The core CPax concepts are organised around the physics-first workflow:
    problems
    solvers
    solutions
+   analysis

@@ -1,6 +1,5 @@
 """Initial-value problems for continuous-time dynamical systems."""
 
-from numbers import Number
 from typing import Any
 
 import equinox as eqx
@@ -9,6 +8,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax.core import Tracer
 
+from cpax._validation import as_array
 from cpax.dynamics import DynamicalSystem
 from cpax.dynamics._systems import State, Time
 
@@ -19,14 +19,7 @@ def _as_initial_state(y0: State) -> State:
         raise ValueError("y0 must contain at least one numerical state leaf.")
 
     def normalise(leaf: Any) -> jax.Array:
-        try:
-            array = jnp.asarray(leaf)
-        except (TypeError, ValueError) as exc:
-            raise TypeError("Each y0 leaf must be a numerical scalar or array.") from exc
-        # A Python numeric scalar may describe a continuous initial state.
-        # Do not silently cast explicitly integer-valued arrays.
-        if array.dtype.kind in "iu" and isinstance(leaf, Number) and not isinstance(leaf, bool):
-            array = array.astype(jnp.result_type(float))
+        array = as_array(leaf, "Each y0 leaf must be a numerical scalar or array.", float_scalars=True)
         if array.dtype.kind not in "fc":
             raise TypeError("Each y0 leaf must have a floating-point or complex dtype.")
         return array
@@ -36,10 +29,7 @@ def _as_initial_state(y0: State) -> State:
 
 def _as_time(value: Time) -> jax.Array:
     """Ensure that an interval endpoint is a real numerical scalar."""
-    try:
-        time = jnp.asarray(value)
-    except (TypeError, ValueError) as exc:
-        raise TypeError("t_span endpoints must be real numerical scalars.") from exc
+    time = as_array(value, "t_span endpoints must be real numerical scalars.")
     if time.ndim != 0 or time.dtype.kind not in "iuf":
         raise ValueError("t_span endpoints must be real numerical scalars.")
     if time.dtype.kind in "iu":

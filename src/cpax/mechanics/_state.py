@@ -1,22 +1,16 @@
 """Canonical phase-space state representation."""
 
-from numbers import Number
 from typing import Any
 
 import equinox as eqx
 import jax
-import jax.numpy as jnp
+
+from cpax._validation import as_array
 
 
 def _as_coordinate(value: Any, name: str) -> jax.Array:
     """Convert Python scalars while rejecting discrete/complex array states."""
-    try:
-        array = jnp.asarray(value)
-    except (TypeError, ValueError) as exc:
-        raise TypeError(f"{name} must be a real numeric scalar or array.") from exc
-
-    if array.dtype.kind in "iu" and isinstance(value, Number) and not isinstance(value, bool):
-        array = array.astype(jnp.result_type(float))
+    array = as_array(value, f"{name} must be a real numeric scalar or array.", float_scalars=True)
     if array.dtype.kind != "f":
         raise TypeError(f"{name} must have a floating-point dtype.")
     return array
