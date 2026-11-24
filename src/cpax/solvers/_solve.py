@@ -35,6 +35,7 @@ def solve(
 
     VelocityVerlet uses fixed steps. Provide dt0 and optionally
     ConstantStepSize(); adaptive controllers and rtol/atol are incompatible.
+    It rejects approximate force calculations unless explicitly allowed.
 
     Without a custom controller, a Diffrax PID controller is constructed
     using relative tolerance 1e-5 and absolute tolerance 1e-7 by default.
@@ -59,10 +60,16 @@ def solve(
         throw=throw,
     )
 
-    if isinstance(resolved_solver, VelocityVerlet) and (
-        not isinstance(problem.system, NewtonianSystem) or not isinstance(problem.y0, PhaseSpaceState)
-    ):
-        raise TypeError("VelocityVerlet currently supports NewtonianSystem with PhaseSpaceState only.")
+    if isinstance(resolved_solver, VelocityVerlet):
+        system = problem.system
+        if not isinstance(system, NewtonianSystem) or not isinstance(problem.y0, PhaseSpaceState):
+            raise TypeError("VelocityVerlet currently supports NewtonianSystem with PhaseSpaceState only.")
+        if not system.force_calculation.exact_gradient and not resolved_solver.allow_approximate_force:
+            raise ValueError(
+                f"{type(system.force_calculation).__name__} only approximates -grad(V), so VelocityVerlet "
+                "is not symplectic for it. Pass VelocityVerlet(allow_approximate_force=True) to integrate it "
+                "as a reversible, volume-preserving scheme."
+            )
 
     return solve_diffrax(
         problem,

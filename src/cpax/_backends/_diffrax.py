@@ -115,20 +115,26 @@ def solve_diffrax(
         if isinstance(solver, VelocityVerlet)
         else backend_solution.ys
     )
+    metadata = {
+        "backend": "diffrax",
+        "solver": type(solver).__name__,
+        "solver_selection": solver_selection,
+        "stepsize_controller": type(stepsize_controller).__name__,
+        "dt0": dt0,
+        "rtol": (stepsize_controller.rtol if isinstance(stepsize_controller, diffrax.PIDController) else None),
+        "atol": (stepsize_controller.atol if isinstance(stepsize_controller, diffrax.PIDController) else None),
+        "max_steps": max_steps,
+        "backend_result": backend_solution.result,
+    }
+    if isinstance(problem.system, NewtonianSystem):
+        # Record which force contract the trajectory was computed under.
+        force_calculation = problem.system.force_calculation
+        metadata["force_calculation"] = type(force_calculation).__name__
+        metadata["exact_gradient_force"] = force_calculation.exact_gradient
     return Solution(
         ts=backend_solution.ts,
         ys=ys,
         status=status,
         stats=dict(backend_solution.stats),
-        metadata={
-            "backend": "diffrax",
-            "solver": type(solver).__name__,
-            "solver_selection": solver_selection,
-            "stepsize_controller": type(stepsize_controller).__name__,
-            "dt0": dt0,
-            "rtol": (stepsize_controller.rtol if isinstance(stepsize_controller, diffrax.PIDController) else None),
-            "atol": (stepsize_controller.atol if isinstance(stepsize_controller, diffrax.PIDController) else None),
-            "max_steps": max_steps,
-            "backend_result": backend_solution.result,
-        },
+        metadata=metadata,
     )

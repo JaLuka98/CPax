@@ -76,13 +76,82 @@ The methods ``force(q)``, ``kinetic_energy(state)``,
 For a saved trajectory, ``jax.vmap(system.energy)(solution.ys)``
 evaluates its energy at every saved point.
 
-Optional analytical conservative forces
----------------------------------------
+Force calculations and the gradient contract
+--------------------------------------------
 
-By default, ``NewtonianSystem`` computes ``force(q)`` using
-``-jax.grad(potential)(q)``. For performance-sensitive workloads, a
-user-supplied analytical force can optionally replace that evaluation.
-The potential remains **required** and is still used by
+A ``NewtonianSystem`` separates *what* the model is from *how* its force is
+evaluated. The required ``potential`` is the **reference potential**
+``V(q)``: it defines the model, its energy, and the force that every force
+evaluation aims to reproduce. The optional ``force_calculation`` is a
+``ForceCalculation`` strategy that evaluates ``F(q)`` and *declares* how that
+force relates to ``-grad(V)(q)``. CPax relies on that declaration to decide
+which guarantees hold. It cannot verify the declaration for user-supplied
+calculations.
+
+``ForceCalculation`` is abstract. Every concrete calculation belongs to one of
+two contract tiers:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 35 40
+
+   * - Tier
+     - Relation to the reference potential
+     - Examples
+   * - ``ExactGradientForce``
+     - ``F(q) = -grad(V)(q)`` on the physical domain, up to round-off
+     - ``AutodiffForce`` (default), ``ExplicitConservativeForce``
+   * - ``ApproximateGradientForce``
+     - ``F(q) ≈ -grad(V)(q)`` with a method-specific, controllable error
+     - Hierarchical N-body methods such as Barnes--Hut tree codes or fast
+       multipole methods (FMM)
+
+Barnes--Hut and FMM are *examples* of the approximate tier; neither is
+privileged by the interface. Approximate hierarchical forces are generally
+not curl-free and can be discontinuous in ``q`` (when tree cells are opened
+or particles change cells), so they are not the gradient of *any* potential.
+The tier therefore changes which statements about the model remain true:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 36 36
+
+   * - Property
+     - ``ExactGradientForce``
+     - ``ApproximateGradientForce``
+   * - ``energy(state)``
+     - Conserved by the exact flow
+     - Reference energy; its drift reflects force errors as well as
+       integration errors
+   * - Total momentum (translation-invariant ``V``)
+     - Conserved
+     - Conserved only if the class declares ``momentum_conserving = True``
+       (e.g. symmetric FMM); standard Barnes--Hut violates Newton's third law
+   * - ``VelocityVerlet``
+     - Symplectic
+     - Explicit opt-in only; time-reversible and volume-preserving, **not**
+       symplectic
+   * - Adaptive Runge--Kutta
+     - Smooth right-hand side for smooth ``V``
+     - Force discontinuities can cause step rejections and degrade error
+       estimates
+   * - Derivatives (JAX autodiff, Lyapunov analysis)
+     - Symmetric Hessian of ``V``
+     - Derivatives of the approximation: asymmetric Jacobians that are
+       only piecewise defined
+
+Each ``Solution`` of a ``NewtonianSystem`` records the contract it was
+computed under in ``metadata["force_calculation"]`` (the class name) and
+``metadata["exact_gradient_force"]``.
+
+Exact gradients
+~~~~~~~~~~~~~~~
+
+By default, ``NewtonianSystem`` uses ``AutodiffForce``, which computes
+``-jax.grad(potential)(q)`` and is exact by construction. For
+performance-sensitive workloads, a user-supplied analytical force can replace
+that evaluation through ``ExplicitConservativeForce``, or equivalently the
+``force_fn`` shorthand. The potential remains **required** and is still used by
 ``potential_energy(state)`` and ``energy(state)``.
 
 .. code-block:: python
@@ -90,7 +159,7 @@ The potential remains **required** and is still used by
    import jax
    import jax.numpy as jnp
    import numpy as np
-   from cpax.mechanics import NewtonianSystem
+   from cpax.mechanics import ExplicitConservativeForce, NewtonianSystem
 
    def potential(q):
        return 0.5 * jnp.sum(q**2)
@@ -100,9 +169,11 @@ The potential remains **required** and is still used by
 
    system = NewtonianSystem(
        potential=potential,
-       force_fn=analytical_force,
+       force_calculation=ExplicitConservativeForce(analytical_force),
        mass=1.0,
    )
+   # Shorthand with the same meaning:
+   system = NewtonianSystem(potential=potential, force_fn=analytical_force, mass=1.0)
 
    # Recommended numerical consistency check at relevant coordinates:
    q = jnp.array([0.3, -0.7])
@@ -113,27 +184,86 @@ The potential remains **required** and is still used by
 
 With ``params=None``, the callback signature is ``force_fn(q)``.
 When ``params`` is supplied, it is ``force_fn(q, params)``.
-The result must be a real floating-point array of **exactly** the same
-shape and dtype as ``q``; scalar broadcasting over multiple coordinates
-is not implicit. Callbacks must be JAX-compatible for use with JIT,
-vectorisation, and differentiable simulations.
+Callbacks must be JAX-compatible for use with JIT, vectorisation, and
+differentiable simulations.
 
-**Physics requirement:** The explicit force must equal
-``-jax.grad(potential)(q)`` on the relevant physical domain. CPax
-checks the force callback's output shape and dtype, **not** its
-mathematical consistency with the potential. An inconsistent callback
-can invalidate the reported mechanical energy, and a non-conservative
-force can invalidate Velocity Verlet's Hamiltonian/symplectic guarantees.
-For arbitrary applied or velocity-dependent forces, use
-``ForcedNewtonianSystem`` instead. Numerical tests at representative
-configurations are recommended but do not prove global equivalence.
-An opt-in consistency-checking utility is tracked in
+**Physics requirement:** An explicit force must equal
+``-jax.grad(potential)(q)`` on the relevant physical domain. CPax checks the
+output shape and dtype, **not** its mathematical consistency with the
+potential. If your force only *approximates* the gradient, declare it as an
+``ApproximateGradientForce`` instead, so that solvers and diagnostics do not
+assume guarantees it cannot provide. For arbitrary applied or
+velocity-dependent forces, use ``ForcedNewtonianSystem``. Numerical tests at
+representative configurations are recommended but do not prove global
+equivalence. An opt-in consistency-checking utility is tracked in
 `issue #75 <https://github.com/JaLuka98/CPax/issues/75>`_.
 
 Analytical forces can be faster for some interactions, particularly dense
 particle systems, but are **not necessarily faster** than automatic
 differentiation. Benchmark representative complete simulations in the
 required precision and on the intended hardware.
+
+Implementing a force calculation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A calculation is an Equinox module that subclasses one of the two tiers and
+implements ``__call__(q, potential, params)``. ``potential`` is the system's
+reference potential with its parameters bound; ``params`` is the system's
+parameter PyTree (``None`` when absent). Its array fields, for example an
+opening angle or masses, take part in JIT compilation and differentiation
+like any other Equinox field.
+
+Every calculation must satisfy the following contract:
+
+* It is a **deterministic function of** ``q``, its own fields, and
+  ``params``. It must not carry state between evaluations, such as a tree
+  reused from a previous step. Otherwise the equations of motion are not an
+  autonomous ODE in ``(q, p)`` and Velocity Verlet loses time reversibility.
+* It returns **generalised forces** conjugate to ``q`` (``m_i a_i`` for
+  particles, not accelerations), with exactly the shape and dtype of ``q``.
+* Approximate calculations declare ``momentum_conserving`` as a class
+  attribute. Instantiation fails while a declaration is missing.
+* Approximate calculations should document their accuracy parameters and
+  reproduce the exact force in their exact limit (for example opening angle
+  zero), so that convergence towards ``-grad(V)`` can be tested.
+* The reference potential must describe the *same* model that the
+  calculation approximates: the same gravitating masses, gravitational
+  constant and softening. CPax's ``gravitational_potential`` is unsoftened;
+  a softened tree code needs a correspondingly softened reference potential.
+
+A Barnes--Hut calculation for the gravitational N-body problem would have
+this shape (the tree construction and traversal are omitted):
+
+.. code-block:: python
+
+   from typing import ClassVar
+
+   import equinox as eqx
+   import jax
+   from cpax.mechanics import ApproximateGradientForce, NewtonianSystem, gravitational_potential
+
+   class BarnesHutGravity(ApproximateGradientForce):
+       """Monopole tree approximation of gravitational_potential(masses)."""
+
+       masses: jax.Array
+       opening_angle: float = eqx.field(static=True)
+       momentum_conserving: ClassVar[bool] = False
+
+       def __call__(self, q, potential, params):
+           del potential, params  # The tree uses the particle data directly.
+           ...  # Build a tree from q, then traverse it with the opening criterion.
+           return forces  # Shape (N, D): forces, not accelerations.
+
+   system = NewtonianSystem(
+       potential=gravitational_potential(masses),  # Reference model and energy.
+       mass=masses,
+       force_calculation=BarnesHutGravity(masses, opening_angle=0.5),
+   )
+
+A fast multipole method would subclass ``ApproximateGradientForce`` in the
+same way, declaring ``momentum_conserving = True`` only if its interactions
+are symmetrised. In JAX, such methods need statically bounded tree sizes
+(maximum depth or node count) to remain compatible with ``jit`` and ``vmap``.
 
 General Hamiltonians
 --------------------
@@ -184,7 +314,8 @@ Scope and numerical accuracy
 ----------------------------
 
 ``NewtonianSystem`` and ``HamiltonianSystem`` support autonomous
-conservative models; ``ForcedNewtonianSystem`` also supports damping and
+conservative models (for ``NewtonianSystem``, with an exact-gradient force
+calculation); ``ForcedNewtonianSystem`` also supports damping and
 external driving. General mass matrices, hard constraints, and collision
 events are outside the current scope. Non-None ``IVP.args`` are rejected
 for all three mechanics models; use ``system.params``.
