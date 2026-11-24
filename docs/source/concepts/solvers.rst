@@ -168,6 +168,17 @@ energy conservation: for sufficiently small constant steps in regular
 bound motion, energy errors typically oscillate without secular drift.
 Always check convergence and invariants for the physical system at hand.
 
+The symplectic guarantee also requires an exact-gradient force calculation
+(see :doc:`../physics/mechanics`). ``cpax.solve`` rejects a
+``NewtonianSystem`` whose ``force_calculation`` is an
+``ApproximateGradientForce``, such as a Barnes--Hut or fast multipole
+approximation, unless the solver is constructed as
+``VelocityVerlet(allow_approximate_force=True)``. The kick of an approximate
+force is not a symplectic map, because the force Jacobian is not symmetric.
+The scheme then remains time-reversible and volume-preserving, provided the
+force depends only on the current positions, but the energy error is no
+longer bounded by a modified Hamiltonian and can drift secularly.
+
 The method saves through the standard CPax ``SaveAt`` API. Off-grid
 saved values use *linear interpolation*, which is **not symplectic**.
 For conservation-law studies, sample at actual integration-step endpoints
