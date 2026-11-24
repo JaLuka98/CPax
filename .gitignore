@@ -197,7 +197,7 @@ Temporary Items
 *.png
 
 # Custom user settings
-.vscode/settings.json
+.vscode/*
 
 # Developers can place test and checks in this folder, does not pollute
 temp_dev
