@@ -177,6 +177,18 @@ def test_opted_in_verlet_is_time_reversible_for_approximate_force():
         np.testing.assert_allclose(-backward.p[-1], state.p, atol=1e-10)
 
 
+def test_solution_metadata_records_force_contract():
+    approximate, state = binary_orbit(jnp.asarray([1.0, 0.5]), PerturbedGradient(jnp.asarray(0.1)))
+    result = cpax.solve(cpax.IVP(approximate, state, (0.0, 0.1)))
+    assert result.metadata["force_calculation"] == "PerturbedGradient"
+    assert result.metadata["exact_gradient_force"] is False
+
+    exact, state = binary_orbit(jnp.asarray([1.0, 0.5]), None)
+    result = cpax.solve(cpax.IVP(exact, state, (0.0, 0.1)), solver=VelocityVerlet(), dt0=0.01)
+    assert result.metadata["force_calculation"] == "AutodiffForce"
+    assert result.metadata["exact_gradient_force"] is True
+
+
 def test_approximate_calculation_fields_are_differentiable_and_jittable():
     system, q = three_body(PerturbedGradient(jnp.asarray(0.1)))
     np.testing.assert_allclose(eqx.filter_jit(lambda s, x: s.force(x))(system, q), system.force(q), rtol=1e-6)
