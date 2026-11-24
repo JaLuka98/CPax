@@ -3,6 +3,7 @@
 from typing import Any, ClassVar
 
 import diffrax
+import equinox as eqx
 
 
 class VelocityVerlet(diffrax.AbstractSolver):
@@ -14,7 +15,13 @@ class VelocityVerlet(diffrax.AbstractSolver):
     between steps is not symplectic.
 
     The force at the end of a step is cached for the next step.
+
+    Approximate force calculations (e.g. Barnes-Hut) are rejected unless
+    `allow_approximate_force=True`. The scheme then remains time-reversible
+    and volume-preserving but is not symplectic.
     """
+
+    allow_approximate_force: bool = eqx.field(default=False, static=True)
 
     term_structure: ClassVar = (diffrax.ODETerm, diffrax.ODETerm)
     interpolation_cls: ClassVar = diffrax.LocalLinearInterpolation

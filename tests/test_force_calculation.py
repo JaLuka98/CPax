@@ -8,6 +8,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
+import cpax
 from cpax.mechanics import (
     ApproximateGradientForce,
     AutodiffForce,
@@ -18,6 +19,7 @@ from cpax.mechanics import (
     PhaseSpaceState,
     gravitational_potential,
 )
+from cpax.solvers import VelocityVerlet
 
 
 class PerturbedGradient(ApproximateGradientForce):
@@ -45,6 +47,19 @@ def three_body(force_calculation=None):
     )
     q = jnp.asarray([[0.0, 0.0], [1.0, 0.2], [-0.4, 1.1]])
     return system, q
+
+
+def binary_orbit(system_masses, force_calculation):
+    total_mass = jnp.sum(system_masses)
+    omega = 2 * jnp.pi * jnp.sqrt(total_mass)
+    q0 = jnp.stack([jnp.array([-system_masses[1], 0.0]), jnp.array([system_masses[0], 0.0])]) / total_mass
+    velocities = omega * jnp.stack([jnp.array([0.0, -system_masses[1]]), jnp.array([0.0, system_masses[0]])])
+    system = NewtonianSystem(
+        potential=gravitational_potential(system_masses),
+        mass=system_masses,
+        force_calculation=force_calculation,
+    )
+    return system, PhaseSpaceState(q0, system_masses[:, None] * velocities / total_mass)
 
 
 def test_default_is_exact_autodiff():
@@ -136,6 +151,30 @@ def test_approximate_force_is_not_a_gradient():
     system, q = three_body(PerturbedGradient(jnp.asarray(0.1)))
     jac = jax.jacfwd(system.force)(q).reshape(q.size, q.size)
     assert not bool(jnp.allclose(jac, jac.T, atol=1e-3))
+
+
+def test_verlet_rejects_approximate_force_without_opt_in():
+    system, state = binary_orbit(jnp.asarray([1.0, 0.5]), PerturbedGradient(jnp.asarray(0.1)))
+    problem = cpax.IVP(system, state, (0.0, 0.1))
+    with pytest.raises(ValueError, match="allow_approximate_force"):
+        cpax.solve(problem, solver=VelocityVerlet(), dt0=0.01)
+
+
+def test_opted_in_verlet_is_time_reversible_for_approximate_force():
+    with jax.enable_x64(True):
+        masses = jnp.asarray([1.0, 0.5], dtype=jnp.float64)
+        system, state = binary_orbit(masses, PerturbedGradient(jnp.asarray(0.1, dtype=jnp.float64)))
+        solver = VelocityVerlet(allow_approximate_force=True)
+
+        def integrate(initial):
+            problem = cpax.IVP(system, initial, (0.0, 0.5))
+            return cpax.solve(problem, solver=solver, dt0=0.005, max_steps=200).ys
+
+        forward = integrate(state)
+        final = PhaseSpaceState(forward.q[-1], forward.p[-1])
+        backward = integrate(PhaseSpaceState(final.q, -final.p))
+        np.testing.assert_allclose(backward.q[-1], state.q, atol=1e-10)
+        np.testing.assert_allclose(-backward.p[-1], state.p, atol=1e-10)
 
 
 def test_approximate_calculation_fields_are_differentiable_and_jittable():
